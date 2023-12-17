@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const Chat = () => {
+import { getDatabase, ref, push, onValue, off, set } from 'firebase/database';
+const Chat = ({route}) => {
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState([
     { id: 'm1', text: 'Hello, how can I help you today?', sender: 'doctor' },
@@ -10,14 +10,70 @@ const Chat = () => {
     { id: 'm3', text: 'Hello, I will write some medicine for you.', sender: 'doctor' },
     // Add more dummy messages here
   ]);
-
+  // const { userId, otherUserId } = route.params;
+  console.log("On Chat Screen 1",route.params);
+  // console.log("On Chat Screen",route.params.userId);
+// Example
+const doctorUserId = route.params.doctorUserId; // Logged-in user's ID
+const patientUserId = route.params.patientUserId; // The other user's ID
+const chatId = [doctorUserId, patientUserId].sort().join('_');
+console.log("Now chat Id is",chatId);
+console.log("Chat ID: ", chatId);
   const sendMessage = () => {
     if (inputText.trim().length > 0) {
-      // Prepend new messages to the start of the messages array
-      setMessages(previousMessages => [{ id: Date.now().toString(), text: inputText, sender: 'patient' }, ...previousMessages]);
+      const database = getDatabase();
+      const chatRef = ref(database, 'chats/' + chatId);
+      const newMessageRef = push(chatRef);
+      set(newMessageRef, {
+        text: inputText,
+        sender: route.params.role, // or 'doctor', based on the logged-in user
+        timestamp: Date.now()
+      }).then((res)=>{
+        console.log("message send successfully", res);
+      }).catch((err)=>{
+        console.log("error sending message", err);
+      })
       setInputText('');
     }
   };
+  useEffect(() => {
+    const database = getDatabase();
+    const chatRef = ref(database, 'chats/' + chatId);
+  
+    const unsubscribe = onValue(chatRef, (snapshot) => {
+      const data = snapshot.val();
+      const fetchedMessages = [];
+      for (let key in data) {
+        fetchedMessages.push({
+          id: key,
+          ...data[key]
+        });
+      }
+      setMessages(fetchedMessages);
+    });
+  
+    return () => off(chatRef, 'value', unsubscribe);
+  }, []);
+
+  useEffect(() => {
+    const database = getDatabase();
+    const chatRef = ref(database, 'chats/' + chatId);
+  
+    const unsubscribe = onValue(chatRef, (snapshot) => {
+      const data = snapshot.val();
+      const fetchedMessages = [];
+      for (let key in data) {
+        fetchedMessages.push({
+          id: key,
+          ...data[key]
+        });
+      }
+      setMessages(fetchedMessages);
+    });
+  
+    return () => off(chatRef, 'value', unsubscribe);
+  }, [chatId]);
+  
   
 
   const renderMessageItem = ({ item }) => (

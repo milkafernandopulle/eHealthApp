@@ -11,8 +11,12 @@ import {
 } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
-const SignUp = () => {
+import firebase, { firestore } from "../firebaseConfig";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { ref, set } from "firebase/database";
+import { auth, database } from "../firebaseConfig";
+import { doc, setDoc } from "firebase/firestore";
+const SignUp = ({navigation}) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,13 +29,28 @@ const SignUp = () => {
   ]);
 
   const handleSignUp = () => {
-    console.log("Name:", name);
-    console.log("Email:", email);
-    console.log("Password:", password);
-    console.log("Role:", value); // Assuming 'value' holds the role
-    console.log("Terms Accepted:", termsAccepted);
-    // Add any additional logic for handling sign-up here
+    console.log("Attempting to sign up user with email:", email);
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        console.log("Firebase auth user created:", userCredential.user);
+        const user = userCredential.user;
+        // Store user info in Firestore
+        return setDoc(doc(firestore, "users", user.uid), {
+          name: name,
+          email: email,
+          role: value
+        });
+      })
+      .then(() => {
+        console.log("User info saved in Firestore");
+        navigation.navigate('SignIn')
+      })
+      .catch((error) => {
+        console.error("Error in user sign-up:", error.message);
+      });
   };
+  
+
 
   return (
     <View style={styles.container}>
@@ -94,7 +113,7 @@ const SignUp = () => {
         <Text style={styles.dividerText}>Or</Text>
         <View style={styles.divider} />
       </View>
-      <TouchableOpacity>
+      <TouchableOpacity onPress={()=> navigation.navigate('SignIn')}>
         <Text style={styles.signInText}>Already have an account ? Sign In</Text>
       </TouchableOpacity>
     </View>

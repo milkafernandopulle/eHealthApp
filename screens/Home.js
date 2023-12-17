@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import DoctorCard from '../components/DoctorCard';
-
-const Home = () => {
+import { useNavigation } from '@react-navigation/native';
+const Home = ({DoctorList}) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const navigation = useNavigation();
   const [doctors, setDoctors] = useState([
     {id:1, name: 'Dr. Ayesha', specialty: 'Cardiologist', rating: 5, hospital: 'City Hospital' },
     {id:2, name: 'Dr. John Doe', specialty: 'Dentist', rating: 4, hospital: 'General Hospital' },
@@ -15,25 +16,25 @@ const Home = () => {
     {id:7, name: 'Dr. Michael Davis', specialty: 'Orthopedic', rating: 4.8, hospital: 'Ortho Care' },
     // ... add more doctors as needed
   ]);
-
-  const filteredDoctors = doctors.filter(doctor => {
-    const doctorData = `${doctor.name.toLowerCase()} ${doctor.specialty.toLowerCase()} ${doctor.hospital.toLowerCase()}`;
+ console.log("Dcotor List inside Home",DoctorList);
+  const filteredDoctors = DoctorList.filter(doctor => {
+    const doctorData = `${doctor?.name?.toLowerCase()} ${doctor?.speciality?.toLowerCase()} ${doctor?.hospitalName?.toLowerCase()}`;
     return doctorData.includes(searchQuery.toLowerCase());
   });
 
-  const handleAppointmentPress = (doctorId, doctorName) => {
-    console.log(`Booking appointment for doctorId: ${doctorId}, doctorName: ${doctorName}`);
+  const handleAppointmentPress = (doctorId, doctorName,speciality) => {
+    navigation.navigate("bookAppointment", {
+      doctorId: doctorId,
+      doctorName: doctorName,
+      doctorSpeciality:speciality
+    });
+    console.log(`Booking appointment for doctorId: ${doctorId}, doctorName: ${doctorName} and ${speciality}`);
     // Add additional logic for appointment booking here
   };
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Fixed Header Section */}
       <View style={styles.header}>
-        <View style={styles.locationWrapper}>
-          <FontAwesome5 name="map-marker-alt" size={20} color="#4F8EF7" />
-          <Text style={styles.locationText}>New York, USA</Text>
-          <MaterialIcons name="keyboard-arrow-down" size={20} color="black" />
-        </View>
         <View style={styles.searchBar}>
           <TextInput
             placeholder="Search"
@@ -48,15 +49,16 @@ const Home = () => {
       {/* Scrollable Content */}
       <ScrollView style={styles.cardContainer}>
         {filteredDoctors.map((doctor, index) => (
-          <DoctorCard
-          key={doctor.id} // Assuming each doctor has a unique id
-          doctorId={doctor.id}
-          doctorName={doctor.name}
-          specialty={doctor.specialty}
-          rating={doctor.rating}
-          hospitalName={doctor.hospital}
-          onAppointmentPress={() => handleAppointmentPress(doctor.id, doctor.name)}
-        />
+           <DoctorCard
+           key={doctor.id} // Assuming each doctor has a unique id
+           doctorId={doctor.id}
+           doctorName={doctor.name}
+           specialty={doctor.speciality}
+           rating={5}
+           hospitalName={doctor.hospitalName}
+           onAppointmentPress={() => handleAppointmentPress(doctor.id, doctor.name,doctor.speciality)}
+         />
+         
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -71,7 +73,7 @@ const styles = StyleSheet.create({
   header: {
     // styles for the fixed header
     paddingHorizontal: 20,
-    paddingTop: 50, // adjust to your status bar height
+    // paddingTop: 50, // adjust to your status bar height
   },
   locationWrapper: {
     flexDirection: 'row',
