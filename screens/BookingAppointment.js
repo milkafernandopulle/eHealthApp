@@ -43,6 +43,7 @@ const Appointment = ({ navigation, route }) => {
     console.log("Appointment made!");
     console.log("dcotorID", doctorId);
     console.log("doctorName", doctorName);
+    console.log("patientName", userInfo.name);
     console.log("doctorSpeciality", doctorSpeciality);
     console.log("selectedDate", selectedDate);
     console.log("selectedTime", selectedTime);
@@ -52,12 +53,13 @@ const Appointment = ({ navigation, route }) => {
       const bookingDetails = {
         doctorId,
         doctorName,
+        patientName:userInfo.name,
         doctorSpeciality,
         selectedDate,
         selectedTime,
         appointmentType,
         patientId: userInfo.userID, // Assuming the patient is the current user
-        status: "pending", // Initial status of the booking
+        status: "upcoming", // Initial status of the booking
         createdAt: new Date(), // Timestamp for when the booking is created
       };
       console.log("bookingDetails is>>", bookingDetails);

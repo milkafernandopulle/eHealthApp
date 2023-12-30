@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image, Dimensions,ScrollView } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { firestore } from '../firebaseConfig';
 const bookingsData = [
     {
       doctorName: 'Dr. Jenny William',
@@ -54,41 +57,78 @@ const bookingsData = [
   ];
   
 
-const BookingList = ({navigation}) => {
-    const [activeTab, setActiveTab] = useState('Upcoming');
-  const getFilteredData = () => {
-    return bookingsData.filter(booking => booking.status === activeTab);
+const BookingList = ({ route }) => {
+    const [activeTab, setActiveTab] = useState('upcoming');
+    const navigation = useNavigation();
+    const [bookingList, setBookingList] = useState([]);
+    const { UserId, role } = route.params;
+    console.log("the data receive through Props Inside Booking List", UserId,role);
+    useEffect(() => {
+      const fetchBookings = async () => {
+        try {
+          let q;
+          const bookingsRef = collection(firestore, "bookings");
+          if (role === 'patient') {
+            q = query(bookingsRef, where("patientId", "==", UserId));
+          } else if (role === 'doctor') {
+            q = query(bookingsRef, where("doctorId", "==", UserId));
+          } else {
+            // Handle other roles or errors
+          }
+  
+          const querySnapshot = await getDocs(q);
+          const bookings = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setBookingList(bookings);
+        } catch (err) {
+          console.error("Error getting documents:", err);
+        }
+      };
+  
+      if (UserId && role) {
+        fetchBookings();
+      }
+    }, [UserId, role]);
+    console.log("Booking List is:", bookingList);
+  
+  const getFilteredData =  () => {
+    return  bookingList?.filter(booking => booking.status === activeTab);
   };
   const navigateToDetails = (bookingId) => {
     console.log('Navigate to details of booking with ID:', bookingId);
   };
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
+  // console.log("Booking List inside Booking List Component",BookingList);
 
   const renderBookingItem = ({ item }) => (
-    <View style={styles.bookingCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.bookingDate}>{item.date}</Text>
-        {/* <MaterialCommunityIcons name="bell-outline" size={24} color="blue" /> */}
-      </View>
+    <TouchableOpacity style={styles.bookingCard}
+    onPress={() => navigation.navigate('bookingDetail', { bookingId: item.id })}
+    >
       <View style={styles.doctorInfo}>
-        <Image source={item.doctorImage} style={styles.doctorImage} />
+        <Image source={{uri: 'https://cdn.pixabay.com/photo/2017/03/14/03/20/woman-2141808_1280.jpg'}} style={styles.doctorImage} />
         <View style={styles.infoContainer}>
-          <Text style={styles.doctorName}>{item.doctorName}</Text>
-          <Text style={styles.bookingAddress}>{item.status}</Text>
-          <Text style={styles.bookingId}>Booking ID : {item.bookingId}</Text>
+          <Text style={styles.doctorName}>{item.patientName}</Text>
+          <Text style={styles.bookingAddress}>Status: {item.status}</Text>
+          <Text style={styles.bookingId}>Booking ID : {item.id}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
   const renderTabBar = () => {
     return (
       <View style={styles.tabBar}>
-        {['Upcoming', 'Completed', 'Cancelled'].map(tab => (
+        {['upcoming', 'completed', 'cancelled'].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tabItem, activeTab === tab && styles.activeTab]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={styles.tabText}>{tab}</Text>
+            <Text style={styles.tabText}>{capitalizeFirstLetter(tab)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -108,7 +148,7 @@ const BookingList = ({navigation}) => {
         <FlatList
             data={getFilteredData()}
             renderItem={renderBookingItem}
-            keyExtractor={(item) => item.bookingId}
+            keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             // ListHeaderComponent={<YourComponent />} // If you need to render anything above the list
             // ListFooterComponent={<YourComponent />} // If you need to render anything below the list
@@ -123,11 +163,12 @@ const styles = StyleSheet.create({
       backgroundColor: '#fff',
       paddingTop: 10, // Adjust for the status bar height
       paddingBottom: 16,
-      paddingHorizontal: 16,
+      paddingHorizontal: 16
     },
     bookingCard: {
       margin: 10,
-      padding: 15,
+      paddingHorizontal: 10,
+      paddingVertical:16,
       backgroundColor: '#fff',
       borderRadius: 10,
       shadowColor: '#000',
@@ -143,7 +184,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        paddingTop: 42, // Adjust for the status bar height
         paddingBottom: 16,
         paddingHorizontal: 16,
       },
@@ -152,11 +192,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         marginLeft: 16,
       },
-    cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
     bookingDate: {
       fontSize: 16,
       fontWeight: 'bold',

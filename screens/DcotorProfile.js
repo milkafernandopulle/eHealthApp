@@ -1,15 +1,14 @@
-// DoctorProfile.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import * as ImagePicker from 'expo-image-picker';
-import { auth, firestore } from '../firebaseConfig'; // Make sure to import the auth module from your firebase config
+import { MaterialIcons } from '@expo/vector-icons';
+import { auth, firestore } from '../firebaseConfig';
 import { useUserInfo } from '../context/userContext';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const DoctorProfile = ({ navigation }) => {
   const [name, setName] = useState('');
-  const [userID, setUserID] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [hospitalName, setHospitalName] = useState('');
@@ -18,23 +17,22 @@ const DoctorProfile = ({ navigation }) => {
   const { userInfo } = useUserInfo();
 
   useEffect(() => {
-    console.log("user Info on Profile screen is", userInfo);
-    // Assuming the user is logged in and you have fetched their data:
-    const currentUser = auth.currentUser; // This would be your logged in user object from Firebase auth
-    console.log("Current User: " + currentUser);
     if (userInfo) {
-      setName(userInfo.name); // Or from Firestore user document
-      setEmail(userInfo.email); // Or from Firestore user document
-      setRole(userInfo.role); // You would get this from your Firestore user document
-      setUserID(userInfo.userID)
+      setName(userInfo.name);
+      setEmail(userInfo.email);
+      setRole(userInfo.role);
+      // Fetch the image from Firestore if it exists
+      if (userInfo.image) {
+        setImage(userInfo.image);
+      }
     }
-  }, []);
+  }, [userInfo]);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [1, 1],
       quality: 1,
     });
 
@@ -44,93 +42,125 @@ const DoctorProfile = ({ navigation }) => {
   };
 
   const updateProfile = async () => {
-    console.log("user id is",userID);
-    console.log('Name:', name);
-    console.log('Email:', email);
-    console.log('Role:', role);
-    console.log('Hospital Name:', hospitalName);
-    console.log('Speciality:', speciality);
-    console.log('Image URI:', image);
-    // Update the Firestore document with new profile details
-  try {
-    await setDoc(doc(firestore, "users", userID), {
-      hospitalName,
-      speciality,
-      image
-    }, { merge: true });
-    console.log("Profile updated successfully");
-    navigation.navigate("DoctorDashboard");
-    // Here you can do whatever you need to do upon a successful update
-    // For example, navigate back to the dashboard or show a success message
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    // Here you can handle the error, show an error message, etc.
-  }
-};
+    try {
+      const userRef = doc(firestore, "users", userInfo.userID);
+      await updateDoc(userRef, {
+        hospitalName,
+        speciality,
+        image,
+      });
+      alert('Profile updated successfully!');
+      navigation.goBack();
+    } catch (error) {
+      alert('Error updating profile.');
+      console.error("Error updating profile:", error);
+    }
+  };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      {/* <Text style={styles.title}>Doctor Profile</Text> */}
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        value={name}
-        style={styles.nonEditableInput}
-      />
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        value={email}
-        style={styles.nonEditableInput}
-      />
-      <Text style={styles.label}>Role</Text>
-      <TextInput
-        value={role}
-        style={styles.nonEditableInput}
-      />
-      <Text style={styles.label}>Hospital Name</Text>
-      <TextInput
-        placeholder="Hospital Name"
-        value={hospitalName}
-        onChangeText={setHospitalName}
-        style={styles.input}
-      />
-      <Text style={styles.label}>Speciality</Text>
-      <TextInput
-        placeholder="Speciality"
-        value={speciality}
-        onChangeText={setSpeciality}
-        style={styles.input}
-      />
-      <PrimaryButton buttonText="Pick an Image" onPress={pickImage} />
-      {image && <Image source={{ uri: image }} style={styles.image} />}
-      <View style={styles.buttonContainer}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={styles.imageContainer}>
+          {image ? (
+            <Image source={{ uri: image }} style={styles.profileImage} />
+          ) : (
+            <MaterialIcons name="account-circle" size={100} color="#bdbdbd" />
+          )}
+          <TouchableOpacity onPress={pickImage} style={styles.iconContainer}>
+            <MaterialIcons name="edit" size={24} color="#ffffff" style={styles.editIcon} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            editable={false}
+          />
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            style={styles.input}
+            editable={false}
+          />
+          <Text style={styles.label}>Role</Text>
+          <TextInput
+            value={role}
+            onChangeText={setRole}
+            style={styles.input}
+            editable={false}
+          />
+          <Text style={styles.label}>Hospital Name</Text>
+          <TextInput
+            placeholder="Hospital Name"
+            value={hospitalName}
+            onChangeText={setHospitalName}
+            style={styles.input}
+          />
+          <Text style={styles.label}>Speciality</Text>
+          <TextInput
+            placeholder="Speciality"
+            value={speciality}
+            onChangeText={setSpeciality}
+            style={styles.input}
+          />
+        </View>
+       <View style={styles.buttonContainer}></View>
         <PrimaryButton buttonText="Update Profile" onPress={updateProfile} />
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    // justifyContent: 'center',
-    paddingHorizontal:30,
-    paddingVertical:10,
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50
+  },
+  imageContainer: {
+    alignItems: 'center',
+    position: 'relative', // Add this to position your edit icon absolutely
     marginBottom: 20,
-    textAlign: 'center',
+  },
+  iconContainer: {
+    position: 'absolute', // Position the icon over the image
+    right: 62,
+    top: 17,
+    backgroundColor: 'red', // Your icon background color
+    borderRadius: 20, // Circular background
+    padding: 4,
+  },
+  editIcon: {
+    // If you need any styling for the icon
+  },
+  imagePicker: {
+    marginTop: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  imagePickerText: {
+    color: '#0000ff',
+  },
+  infoContainer: {
+    width: '100%',
   },
   label: {
     fontSize: 16,
     marginBottom: 5,
   },
-  nonEditableInput: {
-    height: 50,
+  input: {
+    height: 40,
+    width:250,
     borderColor: 'gray',
     borderWidth: 1,
     borderRadius: 6,
@@ -138,39 +168,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: '#ebebeb',
   },
-  input: {
-    height: 50,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 6,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  button: {
-    backgroundColor: 'blue',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  image: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-    marginBottom: 20,
-    borderRadius:50
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 20,
-    right: 20,
-  },
-  // Add styles for other elements if needed
+  buttonContainer:{
+    marginTop:30
+  }
 });
 
 export default DoctorProfile;
