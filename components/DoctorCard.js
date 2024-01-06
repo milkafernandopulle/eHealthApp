@@ -2,12 +2,12 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const DoctorCard = ({doctorId,doctorName, specialty, rating, reviews, onAppointmentPress ,hospitalName}) => {
+const DoctorCard = ({doctorId,doctorName, specialty, onAppointmentPress ,hospitalName,doctorImage}) => {
   return (
     <View style={styles.card}>
       <View style={styles.cardContent}>
         <Image
-          source={{ uri: 'https://cdn.pixabay.com/photo/2017/03/14/03/20/woman-2141808_1280.jpg' }} // Replace with actual image path
+          source={{ uri: doctorImage }} // Replace with actual image path
           style={styles.doctorImage}
         />
         <View style={styles.infoContainer}>
@@ -18,15 +18,6 @@ const DoctorCard = ({doctorId,doctorName, specialty, rating, reviews, onAppointm
           <Text style={styles.doctorName}>{doctorName}</Text>
           <Text style={styles.specialty}>{specialty}</Text>
           <Text style={styles.specialty}>{hospitalName}</Text>
-          <View style={styles.ratingContainer}>
-            <FontAwesome name="star" size={16} color="#FFD700" />
-            <FontAwesome name="star" size={16} color="#FFD700" />
-            <FontAwesome name="star" size={16} color="#FFD700" />
-            <FontAwesome name="star" size={16} color="#FFD700" />
-            <FontAwesome name="star" size={16} color="#FFD700" />
-            <Text style={styles.rating}>{rating}</Text>
-            <Text style={styles.reviews}>{reviews} Reviews</Text>
-          </View>
         </View>
       </View>
       <TouchableOpacity onPress={() => onAppointmentPress(doctorId, doctorName)} style={styles.appointmentButton}>
@@ -84,21 +75,6 @@ const styles = StyleSheet.create({
   specialty: {
     fontSize: 14,
     color: 'grey',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  rating: {
-    fontSize: 14,
-    marginLeft: 4,
-    fontWeight: 'bold',
-  },
-  reviews: {
-    fontSize: 12,
-    color: 'grey',
-    marginLeft: 4,
   },
   favoriteButton: {
     marginLeft: 12,

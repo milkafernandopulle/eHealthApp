@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  ImageBackground,
 } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -16,107 +17,150 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, database } from "../firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
-const SignUp = ({navigation}) => {
+import Heading from "../components/heading";
+import { validateEmail, validatePassword } from "../utils/validation";
+const SignUp = ({ navigation }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [errors, setErrors] = useState({});
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(null);
+  const [passwordVisibility, setPasswordVisibility] = useState(true);
   const [items, setItems] = useState([
     { label: "Doctor", value: "doctor" },
     { label: "Patient", value: "patient" },
   ]);
+  // Validation functions
+  const validateForm = () => {
+    let newErrors = {};
+
+    // Check if all fields are filled
+    if (!name.trim()) newErrors.name = "Name is required.";
+    if (!email.trim()) newErrors.email = "Email is required.";
+    if (!password.trim()) newErrors.password = "Password is required.";
+    if (!value) newErrors.role = "Role is required.";
+
+    // If all fields are filled, check for specific validation
+    if (!newErrors.email && !validateEmail(email)) {
+      newErrors.email = "Please enter a valid email.";
+    }
+    if (!newErrors.password && !validatePassword(password)) {
+      newErrors.password =
+        "Password must be at least 6 characters long, include an uppercase letter and a special character.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSignUp = () => {
+    setErrors((prevErrors) => ({ ...prevErrors, firebase: undefined }));
     console.log("Attempting to sign up user with email:", email);
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        console.log("Firebase auth user created:", userCredential.user);
-        const user = userCredential.user;
-        // Store user info in Firestore
-        return setDoc(doc(firestore, "users", user.uid), {
-          name: name,
-          email: email,
-          role: value
+    if (validateForm()) {
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          console.log("Firebase auth user created:", userCredential.user);
+          const user = userCredential.user;
+          // Store user info in Firestore
+          return setDoc(doc(firestore, "users", user.uid), {
+            name: name,
+            email: email,
+            role: value,
+          });
+        })
+        .then(() => {
+          console.log("User info saved in Firestore");
+          navigation.navigate("SignIn");
+        })
+        .catch((error) => {
+          console.error("Error in user sign-up:", error.message);
+          setErrors({ firebase: error.message });
         });
-      })
-      .then(() => {
-        console.log("User info saved in Firestore");
-        navigation.navigate('SignIn')
-      })
-      .catch((error) => {
-        console.error("Error in user sign-up:", error.message);
-      });
+    }
   };
-  
-
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>
-          Fill your information below to register your account.
-        </Text>
+    <ImageBackground
+      source={{
+        uri: "https://images.pexels.com/photos/48604/pexels-photo-48604.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      }}
+      style={styles.backgroundImage}
+      resizeMode="cover" // Cover the entire screen
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <Heading />
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>
+              Fill your information below to register your account.
+            </Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            onChangeText={setName}
+            value={name}
+            placeholder="Name"
+          />
+          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+          <TextInput
+            style={styles.input}
+            onChangeText={setEmail}
+            value={email}
+            placeholder="Email"
+            keyboardType="email-address"
+          />
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          <TextInput
+            style={styles.passwordInput}
+            onChangeText={setPassword}
+            value={password}
+            secureTextEntry={passwordVisibility}
+            placeholder="Password"
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setPasswordVisibility(!passwordVisibility)}
+          >
+            <MaterialCommunityIcons
+              name={passwordVisibility ? "eye-off" : "eye"}
+              size={24}
+              color="grey"
+            />
+          </TouchableOpacity>
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          )}
+          <DropDownPicker
+            placeholder="Select Your Role"
+            open={open}
+            value={value}
+            items={items}
+            setOpen={setOpen}
+            setValue={setValue}
+            setItems={setItems}
+          />
+          {errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
+          {errors.firebase && (
+            <Text style={styles.errorText}>{errors.firebase}</Text>
+          )}
+          <View style={styles.buttonContainer}>
+            <PrimaryButton buttonText="Sign Up" onPress={handleSignUp} />
+          </View>
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>Or</Text>
+            <View style={styles.divider} />
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate("SignIn")}>
+            <Text style={styles.signInText}>
+              Already have an account ? Sign In
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <TextInput
-        style={styles.input}
-        onChangeText={setName}
-        value={name}
-        placeholder="Name"
-      />
-
-      <TextInput
-        style={styles.input}
-        onChangeText={setEmail}
-        value={email}
-        placeholder="Email"
-        keyboardType="email-address"
-      />
-
-      <TextInput
-        style={styles.input}
-        onChangeText={setPassword}
-        value={password}
-        secureTextEntry
-        placeholder="Password"
-      />
-      <DropDownPicker
-        placeholder="Select Your Role"
-        open={open}
-        value={value}
-        items={items}
-        setOpen={setOpen}
-        setValue={setValue}
-        setItems={setItems}
-      />
-      <TouchableOpacity
-        style={[
-          styles.checkboxContainer,
-          open ? { marginTop: 100 } : {},
-        ]}
-        onPress={() => setTermsAccepted(!termsAccepted)}
-      >
-        <MaterialCommunityIcons 
-          name={termsAccepted ? 'checkbox-marked' : 'checkbox-blank-outline'} 
-          size={24} 
-          color={termsAccepted ? 'blue' : 'grey'} 
-        />
-        <Text style={styles.termsText}>Agree with Terms & Condition</Text>
-      </TouchableOpacity>
-
-      <PrimaryButton buttonText="Sign Up"  onPress={handleSignUp} />
-
-      <View style={styles.dividerContainer}>
-        <View style={styles.divider} />
-        <Text style={styles.dividerText}>Or</Text>
-        <View style={styles.divider} />
-      </View>
-      <TouchableOpacity onPress={()=> navigation.navigate('SignIn')}>
-        <Text style={styles.signInText}>Already have an account ? Sign In</Text>
-      </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 };
 
@@ -144,7 +188,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    marginTop:8
+    marginTop: 8,
   },
   input: {
     height: 50,
@@ -163,7 +207,7 @@ const styles = StyleSheet.create({
   },
   termsText: {
     color: "blue",
-    marginLeft:8
+    marginLeft: 8,
   },
   dividerContainer: {
     flexDirection: "row",
@@ -191,6 +235,48 @@ const styles = StyleSheet.create({
   signInText: {
     color: "blue",
     textAlign: "center",
+  },
+  buttonContainer: {
+    marginTop: 18,
+  },
+  backgroundImage: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.15)", // Adjust the last value for more/less opacity
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 10,
+    textAlign: "left",
+  },
+  passwordInput: {
+    height: 50,
+    borderColor: "gray",
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 10,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    backgroundColor: Platform.OS === "android" ? "#fff" : undefined,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 30, // Add padding to make room for the icon inside the text input
+    position:"relative"
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 35,
+    top:95,
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
   },
 });
 

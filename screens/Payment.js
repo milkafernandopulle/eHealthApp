@@ -2,16 +2,26 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 
-const Payment = () => {
+const Payment = ({navigation}) => {
   const [cardHolderName, setCardHolderName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
-  const [saveCard, setSaveCard] = useState(false);
-
+  const [isValid, setIsValid] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const handleAddCard = () => {
+    if (!cardHolderName || !cardNumber || !expiryDate || !cvv) {
+      setIsValid(false);
+      setErrorMessage('All fields are required'); // Set error message
+      return; // Stop the function if validation fails
+    }
+
+    // Reset validation state if validation passes
+    setIsValid(true);
+    setErrorMessage('');
     // Add logic to handle adding card
-    console.log('Add Card');
+    // console.log('Add Card');
+      navigation.navigate("BookingConfirmation");
   };
 
   return (
@@ -63,13 +73,9 @@ const Payment = () => {
             />
           </View>
         </View>
-
-        <TouchableOpacity style={styles.saveCard} onPress={() => setSaveCard(!saveCard)}>
-          <View style={saveCard ? styles.checkboxChecked : styles.checkbox} />
-          <Text style={styles.saveCardText}>Save Card</Text>
-        </TouchableOpacity>
         <View style={styles.buttonContainer}>
-            <PrimaryButton buttonText="Add Card" onPress={handleAddCard} />
+        {!isValid && <Text style={styles.errorText}>{errorMessage}</Text>}
+            <PrimaryButton buttonText="Complete Payment" onPress={handleAddCard} />
         </View>
       </View>
     </ScrollView>
@@ -127,12 +133,6 @@ const styles = StyleSheet.create({
   cvvContainer: {
     flex: 1,
   },
-  saveCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop:25,
-  },
   checkbox: {
     height: 20,
     width: 20,
@@ -141,19 +141,14 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginRight: 10,
   },
-  checkboxChecked: {
-    height: 20,
-    width: 20,
-    backgroundColor: '#4F8EF7',
-    borderRadius: 3,
-    marginRight: 10,
-  },
-  saveCardText: {
-    fontSize: 16,
-  },
   buttonContainer:{
     marginTop:50
-  }
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
 });
 
 export default Payment;

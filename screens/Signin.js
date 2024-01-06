@@ -6,87 +6,140 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  ImageBackground,
 } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import { auth, firestore } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useUserInfo } from "../context/userContext";
+import Heading from "../components/heading";
+import { validateEmail } from "../utils/validation";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const SignIn = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
   const { setUserInfo } = useUserInfo();
-
+  const [passwordVisibility, setPasswordVisibility] = useState(true);
   const handleSignIn = async () => {
-    await signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // User is signed in
-        const user = userCredential.user;
-        console.log("User info inside signIn.js:", user);
-        // Retrieve user info from Firestore
-        getDoc(doc(firestore, "users", user.uid)).then((docSnap) => {
-          if (docSnap.exists()) {
-            const userInfo = docSnap.data();
-            console.log("User info:", userInfo);
-            // Redirect based on role
-            // ... in handleSignIn function
-            // if (userInfo.role === "doctor") {
-            //   // Navigate to Doctor's dashboard
-            //   navigation.navigate("Main", { screen: 'DoctorDashboard', params: { userName: userInfo.name } });
-            // } else if (userInfo.role === "patient") {
-            //   // Navigate to Patient's dashboard
-            //   navigation.navigate("Main", { screen: 'PatientDashboard', params: { userName: userInfo.name } });
-            // }
-            setUserInfo({ role: userInfo.role, userID: user.uid,email:userInfo.email,name:userInfo.name }); // Set the user role in context
-            navigation.navigate("Main");
-          } else {
-            console.log("No user data found in Firestore");
-          }
+    setErrors({}); // Reset errors state
+    let newErrors = {};
+    // Validate inputs
+    if (!email.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Please enter a valid email.";
+    }
+
+    if (!password) {
+      newErrors.password = "Password is required.";
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters long.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+    } else {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const userDoc = await getDoc(
+        doc(firestore, "users", userCredential.user.uid)
+      );
+      if (userDoc.exists()) {
+        const userInfo = userDoc.data();
+        console.log("user Info inside SignIn Page is", userInfo);
+        setUserInfo({
+          role: userInfo?.role,
+          userID: userCredential?.user.uid,
+          email: userInfo?.email,
+          name: userInfo?.name,
+          availability: userInfo?.availability,
+          hospitalName: userInfo?.hospitalName,
+          image: userInfo?.image,
+          speciality: userInfo?.speciality,
         });
-      })
-      .catch((error) => {
-        // Handle errors here
-        console.log("error: " + error);
-      });
+        navigation.navigate("Main");
+        setEmail("");
+        setPassword("");
+      } else {
+        console.log("No user data found in Firestore");
+        setErrors({ firebase: "No user data found." });
+      }
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Sign In</Text>
-      <Text style={styles.subtitle}>Hi! Welcome back, you’ve been missed</Text>
+    <ImageBackground
+      source={{
+        uri: "https://images.pexels.com/photos/48604/pexels-photo-48604.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      }}
+      style={styles.backgroundImage}
+      resizeMode="cover" // Cover the entire screen
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <Heading />
+          <Text style={styles.title}>Sign In</Text>
+          <Text style={styles.subtitle}>
+            Hi! Welcome back, you’ve been missed
+          </Text>
 
-      <TextInput
-        style={styles.input}
-        onChangeText={setEmail}
-        value={email}
-        placeholder="Email"
-        keyboardType="email-address"
-      />
+          <TextInput
+            style={styles.input}
+            onChangeText={setEmail}
+            value={email}
+            placeholder="Email"
+            keyboardType="email-address"
+          />
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          <TextInput
+            style={styles.passwordInput}
+            onChangeText={setPassword}
+            value={password}
+            secureTextEntry={passwordVisibility}
+            placeholder="Password"
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setPasswordVisibility(!passwordVisibility)}
+          >
+            <MaterialCommunityIcons
+              name={passwordVisibility ? "eye-off" : "eye"}
+              size={24}
+              color="grey"
+            />
+          </TouchableOpacity>
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          )}
 
-      <TextInput
-        style={styles.input}
-        onChangeText={setPassword}
-        value={password}
-        secureTextEntry
-        placeholder="Password"
-      />
+          {errors.firebase && (
+            <Text style={styles.errorText}>{errors.firebase}</Text>
+          )}
+          <TouchableOpacity>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity>
-        <Text style={styles.forgotPassword}>Forgot Password?</Text>
-      </TouchableOpacity>
+          <PrimaryButton buttonText="Sign In" onPress={handleSignIn} />
 
-      <PrimaryButton buttonText="Sign In" onPress={handleSignIn} />
-
-      <View style={styles.dividerContainer}>
-        <View style={styles.divider} />
-        <Text style={styles.dividerText}>Or</Text>
-        <View style={styles.divider} />
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>Or</Text>
+            <View style={styles.divider} />
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+            <Text style={styles.signUpText}>
+              Don’t have an account? Sign Up
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-        <Text style={styles.signUpText}>Don’t have an account? Sign Up</Text>
-      </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 };
 
@@ -160,6 +213,45 @@ const styles = StyleSheet.create({
   signUpText: {
     color: "blue",
     textAlign: "center",
+  },
+  backgroundImage: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.15)", // Adjust the last value for more/less opacity
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 10,
+    textAlign: "left",
+  },
+  passwordInput: {
+    height: 50,
+    borderColor: "gray",
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 10,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    backgroundColor: Platform.OS === "android" ? "#fff" : undefined,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 30, // Add padding to make room for the icon inside the text input
+    position: "relative",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 35,
+    top: 58,
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
   },
 });
 

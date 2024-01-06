@@ -17,30 +17,22 @@ import { auth, firestore } from "../firebaseConfig";
 import { useUserInfo } from "../context/userContext";
 import { doc, updateDoc } from "firebase/firestore";
 
-const DoctorProfile = ({ navigation }) => {
+const PatientProfile = ({ navigation }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [hospitalName, setHospitalName] = useState("");
   const [speciality, setSpeciality] = useState("");
-  const [availability, setAvailability] = useState("");
   const [image, setImage] = useState(null);
-  const [isValid, setIsValid] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
   const { userInfo } = useUserInfo();
-
+  const [isValid, setIsValid] = useState(true); // New state for form validation
+  const [errorMessage, setErrorMessage] = useState('');
   useEffect(() => {
+    console.log("the user Info received from global state inside patient profile is",userInfo);
     if (userInfo) {
-      console.log(
-        "The user Info we received inside doctor Profile Page is",
-        userInfo
-      );
       setName(userInfo.name);
       setEmail(userInfo.email);
       setRole(userInfo.role);
-      setHospitalName(userInfo.hospitalName);
-      setAvailability(userInfo.availability);
-      setSpeciality(userInfo.speciality);
       // Fetch the image from Firestore if it exists
       if (userInfo.image) {
         setImage(userInfo.image);
@@ -62,7 +54,7 @@ const DoctorProfile = ({ navigation }) => {
   };
 
   const updateProfile = async () => {
-    if (!name || !email || !role || !hospitalName || !speciality || !availability) {
+    if (!name || !email || !role) {
       setIsValid(false);
       setErrorMessage('All fields are required'); // Set error message
       return; // Stop the function if validation fails
@@ -75,7 +67,6 @@ const DoctorProfile = ({ navigation }) => {
         hospitalName,
         speciality,
         image,
-        availability,
       });
       alert("Profile updated successfully!");
       navigation.goBack();
@@ -107,66 +98,31 @@ const DoctorProfile = ({ navigation }) => {
         </View>
 
         <View style={styles.infoContainer}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput value={name} onChangeText={setName} style={styles.input} />
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Patient Name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            // editable={false}
+          />
+          <Text style={styles.label}>Patient Email</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
             style={styles.input}
+            // editable={false}
           />
           <Text style={styles.label}>Role</Text>
-          <TextInput value={role} onChangeText={setRole} style={styles.input} />
-          <Text style={styles.label}>Hospital Name</Text>
           <TextInput
-            placeholder="Hospital Name"
-            value={hospitalName}
-            onChangeText={setHospitalName}
+            value={role}
+            onChangeText={setRole}
             style={styles.input}
+            editable={false}
           />
-          <Text style={styles.label}>Speciality</Text>
-          <TextInput
-            placeholder="Speciality"
-            value={speciality}
-            onChangeText={setSpeciality}
-            style={styles.input}
-          />
-          <Text style={styles.label}>Availability</Text>
-          <View style={styles.radioGroup}>
-            <TouchableOpacity
-              style={styles.radioContainer}
-              onPress={() => setAvailability("Yes")}
-            >
-              <View
-                style={[
-                  styles.outerCircle,
-                  availability === "Yes" && styles.selectedOuterCircle,
-                ]}
-              >
-                {availability === "Yes" && <View style={styles.innerCircle} />}
-              </View>
-              <Text style={styles.radioText}>Yes</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.radioContainer}
-              onPress={() => setAvailability("No")}
-            >
-              <View
-                style={[
-                  styles.outerCircle,
-                  availability === "No" && styles.selectedOuterCircle,
-                ]}
-              >
-                {availability === "No" && <View style={styles.innerCircle} />}
-              </View>
-              <Text style={styles.radioText}>No</Text>
-            </TouchableOpacity>
-          </View>
         </View>
-        <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer}></View>
         {!isValid && <Text style={styles.errorText}>{errorMessage}</Text>}
         <PrimaryButton buttonText="Update Profile" onPress={updateProfile} />
-        </View>
       </KeyboardAvoidingView>
     </ScrollView>
   );
@@ -228,42 +184,6 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 30,
   },
-  radioGroup: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 10,
-    marginTop: 10,
-  },
-  radioContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 10,
-  },
-  outerCircle: {
-    height: 24,
-    width: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#000",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  selectedOuterCircle: {
-    borderColor: "blue", // or another color that indicates selection
-  },
-  innerCircle: {
-    height: 12,
-    width: 12,
-    borderRadius: 6,
-    backgroundColor: "blue", // or another color that indicates selection
-  },
-  radioText: {
-    fontSize: 16,
-  },
-  buttonContainer: {
-    marginTop: 10,
-  },
   errorText: {
     color: 'red',
     textAlign: 'center',
@@ -271,4 +191,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DoctorProfile;
+export default PatientProfile;

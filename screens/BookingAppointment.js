@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,11 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import PrimaryButton from "../components/PrimaryButton";
-import { collection, doc, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { firestore } from "../firebaseConfig";
 import { useUserInfo } from "../context/userContext";
 
@@ -17,7 +18,9 @@ const Appointment = ({ navigation, route }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [appointmentType, setAppointmentType] = useState(null);
-  const dates = ["Today", "Mon 5 Oct", "Tue 6 Oct", "Wed 7 Oct"]; // Add more dates as needed
+  const [bookedSlots, setBookedSlots] = useState({});
+  const [dates, setDates] = useState([]);
+  // const dates = ["Today", "Mon 5 Oct", "Tue 6 Oct", "Wed 7 Oct"]; // Add more dates as needed
   const times = [
     "7:00 PM",
     "7:30 PM",
@@ -27,15 +30,26 @@ const Appointment = ({ navigation, route }) => {
     "11:00 PM",
   ]; // Add more times as needed
   const appointmentTypes = ["Video Call", "Visit"];
-  const { doctorId, doctorName, doctorSpeciality } = route.params;
+  const { doctorId, doctorName, doctorSpeciality, dcotorImage } = route.params;
   const { userInfo } = useUserInfo();
   console.log("User Info >>>>>>>>>", userInfo);
   console.log(
     "Dcotor Id and name on Appointment Booking Page is",
     doctorId,
     doctorName,
-    doctorSpeciality
+    doctorSpeciality,
+    dcotorImage
   );
+
+  useEffect(() => {
+    console.log("use effect running");
+    // Example usage:
+    const date = getNextSevenDays();
+    setDates(date);
+    // console.log(".....>>>>>>",date);
+    fetchBookings();
+  }, []); // Depend on doctorId to refetch when it changes
+
   // Placeholder function for making an appointment
   const makeAppointment = async () => {
     // navigation.navigate("bookingList");
@@ -53,7 +67,7 @@ const Appointment = ({ navigation, route }) => {
       const bookingDetails = {
         doctorId,
         doctorName,
-        patientName:userInfo.name,
+        patientName: userInfo.name,
         doctorSpeciality,
         selectedDate,
         selectedTime,
@@ -61,6 +75,8 @@ const Appointment = ({ navigation, route }) => {
         patientId: userInfo.userID, // Assuming the patient is the current user
         status: "upcoming", // Initial status of the booking
         createdAt: new Date(), // Timestamp for when the booking is created
+        dcoctorProfile:dcotorImage,
+        patientProfile:userInfo.image
       };
       console.log("bookingDetails is>>", bookingDetails);
       try {
@@ -72,10 +88,11 @@ const Appointment = ({ navigation, route }) => {
           .then((res) => {
             //  navigation.navigate("BookingConfirmation");
             // ... attempt to create the booking
-            console.log("res",res);
+            console.log("res", res);
             console.log("Booking successfully created with ID: ", docRef);
             // Navigate to the BookingConfirmation screen
-            navigation.navigate("BookingConfirmation");
+            navigation.navigate("Payment");
+            // navigation.navigate("BookingConfirmation");
           })
           .catch((err) => {
             console.log("error:", err);
@@ -91,9 +108,63 @@ const Appointment = ({ navigation, route }) => {
     } else {
       // Alert the user that they must fill in all fields
       console.log("Please select a date, time, and appointment type.");
+      Alert.alert(
+        "Alert Title", // Title of the alert
+        "Please select a date, time, and appointment type.", // Message of the alert
+      );
     }
   };
+  const fetchBookings = async () => {
+    console.log("fetch booking run");
+    // Assuming you have a collection called 'bookings' in Firestore
+    const querySnapshot = await getDocs(collection(firestore, "bookings"));
+    // console.log("query Snap SHot is",querySnapshot);
+    const bookings = querySnapshot.docs
+      .map((doc) => doc.data())
+      .filter((booking) => booking.doctorId === doctorId);
+    console.log("the Booking before save to state is", bookings);
+    // Process the bookings to find booked dates and times
+    processBookings(bookings);
+  };
+  const processBookings = (bookings) => {
+    let slots = {};
 
+    bookings.forEach((booking) => {
+      console.log("the book are", booking);
+      const date = booking.selectedDate; // Assuming this is how your date is stored
+      const time = booking.selectedTime;
+
+      if (!slots[date]) {
+        slots[date] = new Set();
+      }
+      slots[date].add(time);
+    });
+    console.log("Processed booked slots>>>>>>:", slots);
+    setBookedSlots(slots);
+  };
+  function getNextSevenDays() {
+    const daysList = [];
+    const today = new Date();
+
+    for (let i = 0; i < 7; i++) {
+      const futureDate = new Date(today);
+      futureDate.setDate(futureDate.getDate() + i);
+
+      const options = { weekday: "short", day: "2-digit", month: "short" };
+      const formattedDate = futureDate.toLocaleDateString("en-US", options);
+
+      daysList.push(formattedDate.replace(",", ""));
+    }
+
+    return daysList;
+  }
+
+  // Call the function
+  const nextSevenDays = getNextSevenDays();
+  console.log("Seven days", nextSevenDays);
+
+  console.log("now date in state are", dates);
+  console.log("The Booking SLot are ", bookedSlots);
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -108,7 +179,7 @@ const Appointment = ({ navigation, route }) => {
       <View style={styles.imageContainer}>
         <Image
           source={{
-            uri: "https://cdn.pixabay.com/photo/2017/03/14/03/20/woman-2141808_1280.jpg",
+            uri: dcotorImage,
           }} // Replace with actual image path
           style={styles.doctorImage}
         />
@@ -142,15 +213,7 @@ const Appointment = ({ navigation, route }) => {
                 selectedDate === date && styles.selectedDateText,
               ]}
             >
-              {date.split(" ")[0]} {/* Day */}
-            </Text>
-            <Text
-              style={[
-                styles.dateText,
-                selectedDate === date && styles.selectedDateText,
-              ]}
-            >
-              {date.split(" ")[1]} {/* Date */}
+              {date} {/* Day */}
             </Text>
           </TouchableOpacity>
         ))}
@@ -163,18 +226,24 @@ const Appointment = ({ navigation, route }) => {
         showsHorizontalScrollIndicator={false}
         style={styles.timeScrollView}
       >
-        {times.map((time, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.timeButton,
-              selectedTime === time && styles.selectedTimeButton,
-            ]}
-            onPress={() => setSelectedTime(time)}
-          >
-            <Text style={styles.timeText}>{time}</Text>
-          </TouchableOpacity>
-        ))}
+        {times.map((time, index) => {
+          const isDisabled = bookedSlots[selectedDate]?.has(time);
+          console.log(`Is ${time} on ${selectedDate} disabled?`, isDisabled);
+          return (
+            <TouchableOpacity
+              key={index}
+              disabled={isDisabled}
+              style={[
+                styles.timeButton,
+                selectedTime === time && styles.selectedTimeButton,
+                isDisabled && styles.disabledTimeButton,
+              ]}
+              onPress={() => setSelectedTime(time)}
+            >
+              <Text style={styles.timeText}>{time}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Appointment Type Selection */}
@@ -239,7 +308,7 @@ const styles = StyleSheet.create({
     width: "90%",
     height: 180, // Adjust the height as necessary
     borderRadius: 8,
-    objectFit: "contain",
+    objectFit: "cover",
   },
   doctorDetails: {
     padding: 16,
@@ -292,7 +361,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     height: 65,
-    width: 100,
+    width: 130,
   },
   selectedDateButton: {
     backgroundColor: "#4F8EF7",
@@ -371,6 +440,10 @@ const styles = StyleSheet.create({
   },
   selectedAppointmentTypeText: {
     color: "white",
+  },
+  disabledTimeButton: {
+    backgroundColor: "#ccc",
+    borderColor: "#aaa",
   },
 });
 

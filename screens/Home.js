@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView, ScrollView,Alert } from 'react-native';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import DoctorCard from '../components/DoctorCard';
 import { useNavigation } from '@react-navigation/native';
@@ -22,12 +22,27 @@ const Home = ({DoctorList}) => {
     return doctorData.includes(searchQuery.toLowerCase());
   });
 
-  const handleAppointmentPress = (doctorId, doctorName,speciality) => {
+  const handleAppointmentPress = (doctorId, doctorName,speciality,availability,dcotorImage) => {
+    console.log("The image is",dcotorImage)
+    if(availability === "No"){
+      return (
+        Alert.alert(
+          "Availibility",
+          "This doctor is not availabe!",
+          [
+            { text: "Back", onPress: () => console.log("Yes Pressed") }
+          ]
+        )
+      )
+    }
+    else{
     navigation.navigate("bookAppointment", {
       doctorId: doctorId,
       doctorName: doctorName,
-      doctorSpeciality:speciality
+      doctorSpeciality:speciality,
+      dcotorImage:dcotorImage
     });
+  }
     console.log(`Booking appointment for doctorId: ${doctorId}, doctorName: ${doctorName} and ${speciality}`);
     // Add additional logic for appointment booking here
   };
@@ -55,8 +70,9 @@ const Home = ({DoctorList}) => {
            doctorName={doctor.name}
            specialty={doctor.speciality}
            rating={5}
+           doctorImage={doctor.image}
            hospitalName={doctor.hospitalName}
-           onAppointmentPress={() => handleAppointmentPress(doctor.id, doctor.name,doctor.speciality)}
+           onAppointmentPress={() => handleAppointmentPress(doctor.id, doctor.name,doctor.speciality,doctor.availability,doctor.image)}
          />
          
         ))}
