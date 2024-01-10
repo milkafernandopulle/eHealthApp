@@ -8,9 +8,10 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+import moment from 'moment';
 import { AntDesign } from "@expo/vector-icons";
 import PrimaryButton from "../components/PrimaryButton";
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { firestore } from "../firebaseConfig";
 import { useUserInfo } from "../context/userContext";
 
@@ -19,16 +20,18 @@ const Appointment = ({ navigation, route }) => {
   const [selectedTime, setSelectedTime] = useState(null);
   const [appointmentType, setAppointmentType] = useState(null);
   const [bookedSlots, setBookedSlots] = useState({});
+  const [times,setTimes]=useState([]);
   const [dates, setDates] = useState([]);
+  const [doctorDetails, setDoctorDetails] = useState(null);
   // const dates = ["Today", "Mon 5 Oct", "Tue 6 Oct", "Wed 7 Oct"]; // Add more dates as needed
-  const times = [
-    "7:00 PM",
-    "7:30 PM",
-    "8:00 PM",
-    "9:00 PM",
-    "10:00 PM",
-    "11:00 PM",
-  ]; // Add more times as needed
+  // const times = [
+  //   "7:00 PM",
+  //   "7:30 PM",
+  //   "8:00 PM",
+  //   "9:00 PM",
+  //   "10:00 PM",
+  //   "11:00 PM",
+  // ]; // Add more times as needed
   const appointmentTypes = ["Video Call", "Visit"];
   const { doctorId, doctorName, doctorSpeciality, dcotorImage } = route.params;
   const { userInfo } = useUserInfo();
@@ -41,14 +44,74 @@ const Appointment = ({ navigation, route }) => {
     dcotorImage
   );
 
+  const getDatesInRange = (startDate, endDate) => {
+    const start = moment(startDate);
+    const end = moment(endDate);
+    const datesInRange = [];
+  
+    while (start <= end) {
+      datesInRange.push(start.format('ddd D MMM YYYY'));
+      start.add(1, 'days');
+    }
+    return datesInRange;
+  };
+  
+
+  const generateTimeSlots = (startTime, endTime) => {
+    const format = 'HH:mm';
+    let start = moment(startTime, format);
+    const end = moment(endTime, format);
+    const times = [];
+    while(start.isSameOrBefore(end)) {
+      times.push(start.format('h:mm A'));
+      start.add(1, 'hour'); 
+    }
+  
+    return times;
+  };
+  
+
   useEffect(() => {
     console.log("use effect running");
-    // Example usage:
-    const date = getNextSevenDays();
-    setDates(date);
-    // console.log(".....>>>>>>",date);
+    getDoctorDetails(doctorId)
+    .then((details) => {
+      console.log("Details inside then is", details);
+      setDoctorDetails(details);
+      if (details) {
+        console.log("inside  iffff");
+        const rangeOfDates = getDatesInRange(details.startDate, details.endDate);
+        const timeSlots = generateTimeSlots(details.formattedStartTime, details.formattedEndTime);
+        console.log("Date Range Before Saving to state is", rangeOfDates);
+        console.log("The Time range before is", timeSlots);
+        setDates(rangeOfDates);
+        setTimes(timeSlots);
+      }
+    })
+    .catch((error) => {
+      console.log("error is",error);
+    });
     fetchBookings();
-  }, []); // Depend on doctorId to refetch when it changes
+  }, [doctorId]);
+
+  
+const getDoctorDetails = async (doctorId) => {
+  try {
+    const docRef = doc(firestore, "users", doctorId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      console.log("Doctor data:", docSnap.data());
+      return docSnap.data(); // This is your doctor's details object
+    } else {
+      // doc.data() will be undefined in this case
+      console.log("No such doctor!");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error getting doctor details:", error);
+    throw error; // You can handle the error as you see fit
+  }
+};
 
   // Placeholder function for making an appointment
   const makeAppointment = async () => {
@@ -142,29 +205,9 @@ const Appointment = ({ navigation, route }) => {
     console.log("Processed booked slots>>>>>>:", slots);
     setBookedSlots(slots);
   };
-  function getNextSevenDays() {
-    const daysList = [];
-    const today = new Date();
-
-    for (let i = 0; i < 7; i++) {
-      const futureDate = new Date(today);
-      futureDate.setDate(futureDate.getDate() + i);
-
-      const options = { weekday: "short", day: "2-digit", month: "short" };
-      const formattedDate = futureDate.toLocaleDateString("en-US", options);
-
-      daysList.push(formattedDate.replace(",", ""));
-    }
-
-    return daysList;
-  }
-
-  // Call the function
-  const nextSevenDays = getNextSevenDays();
-  console.log("Seven days", nextSevenDays);
-
   console.log("now date in state are", dates);
   console.log("The Booking SLot are ", bookedSlots);
+  console.log("Data inside doctor detail state is",doctorDetails);
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -198,25 +241,25 @@ const Appointment = ({ navigation, route }) => {
         showsHorizontalScrollIndicator={false}
         style={styles.dateScrollView}
       >
-        {dates.map((date, index) => (
-          <TouchableOpacity
-            key={index}
+       {dates.map((date, index) => (
+        <TouchableOpacity
+          key={index}
+          style={[
+            styles.dateButton,
+            selectedDate === date && styles.selectedDateButton,
+          ]}
+          onPress={() => setSelectedDate(date)}
+        >
+          <Text
             style={[
-              styles.dateButton,
-              selectedDate === date && styles.selectedDateButton,
+              styles.dateText,
+              selectedDate === date && styles.selectedDateText,
             ]}
-            onPress={() => setSelectedDate(date)}
           >
-            <Text
-              style={[
-                styles.dateText,
-                selectedDate === date && styles.selectedDateText,
-              ]}
-            >
-              {date} {/* Day */}
-            </Text>
-          </TouchableOpacity>
-        ))}
+            {date} {/* Day */}
+          </Text>
+        </TouchableOpacity>
+      ))}
       </ScrollView>
 
       {/* Time Selection */}
@@ -226,24 +269,24 @@ const Appointment = ({ navigation, route }) => {
         showsHorizontalScrollIndicator={false}
         style={styles.timeScrollView}
       >
-        {times.map((time, index) => {
-          const isDisabled = bookedSlots[selectedDate]?.has(time);
-          console.log(`Is ${time} on ${selectedDate} disabled?`, isDisabled);
-          return (
-            <TouchableOpacity
-              key={index}
-              disabled={isDisabled}
-              style={[
-                styles.timeButton,
-                selectedTime === time && styles.selectedTimeButton,
-                isDisabled && styles.disabledTimeButton,
-              ]}
-              onPress={() => setSelectedTime(time)}
-            >
-              <Text style={styles.timeText}>{time}</Text>
-            </TouchableOpacity>
-          );
-        })}
+       {times.map((time, index) => {
+        const isDisabled = bookedSlots[selectedDate]?.has(time);
+        console.log(`Is ${time} on ${selectedDate} disabled?`, isDisabled);
+        return (
+          <TouchableOpacity
+            key={index}
+            disabled={isDisabled}
+            style={[
+              styles.timeButton,
+              selectedTime === time && styles.selectedTimeButton,
+              isDisabled && styles.disabledTimeButton,
+            ]}
+            onPress={() => setSelectedTime(time)}
+          >
+            <Text style={styles.timeText}>{time}</Text>
+          </TouchableOpacity>
+        );
+      })}
       </ScrollView>
 
       {/* Appointment Type Selection */}

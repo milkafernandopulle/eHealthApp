@@ -19,6 +19,8 @@ import { auth, database } from "../firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import Heading from "../components/heading";
 import { validateEmail, validatePassword } from "../utils/validation";
+import ConfirmationAlert from "../components/ConfimationAlert";
+import AlertConfirmation from "../components/ConfimationAlert";
 const SignUp = ({ navigation }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,10 +29,15 @@ const SignUp = ({ navigation }) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(null);
   const [passwordVisibility, setPasswordVisibility] = useState(true);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [items, setItems] = useState([
     { label: "Doctor", value: "doctor" },
     { label: "Patient", value: "patient" },
   ]);
+  const hideSuccessMessage = () => {
+    setShowSuccessMessage(false);
+  };
+
   // Validation functions
   const validateForm = () => {
     let newErrors = {};
@@ -71,7 +78,8 @@ const SignUp = ({ navigation }) => {
         })
         .then(() => {
           console.log("User info saved in Firestore");
-          navigation.navigate("SignIn");
+          setShowSuccessMessage(true);
+          // navigation.navigate("SignIn");
         })
         .catch((error) => {
           console.error("Error in user sign-up:", error.message);
@@ -160,6 +168,17 @@ const SignUp = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
+      {showSuccessMessage && (
+       <AlertConfirmation
+       visible={showSuccessMessage}
+       message="You have been registered successfully!"
+       buttonText="Sign In"
+       onButtonClick={() => {
+         hideSuccessMessage();
+         navigation.navigate("SignIn");
+       }}
+     />
+    )}
     </ImageBackground>
   );
 };

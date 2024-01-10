@@ -126,7 +126,8 @@ console.log("user Info on chat Screen",userInfo);
          renderItem={renderMessageItem}
          contentContainerStyle={[styles.messagesContainer, { paddingBottom: bottomPadding }]}
         //  inverted // This inverts the list so the bottom is the end of the list
-         keyExtractor={(item) => item.id}
+        //  keyExtractor={(item) => {}}
+        //  key={Math.random(0,1)*1000}
          onContentSizeChange={() => flatListRef.current.scrollToEnd({ animated: true })}
          onLayout={() => flatListRef.current.scrollToEnd({ animated: true })}
       />
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   messageText: {
-    color: '#333',
+    color: 'white',
   },
   receiverText: {
     color: '#333', // Adjust as needed for visibility on light blue background

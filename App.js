@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -23,72 +24,72 @@ import { useNavigation } from "@react-navigation/native";
 import PatientProfile from "./screens/PatientProfile";
 import ChatList from "./screens/ChatList";
 import Payment from "./screens/Payment";
-import Snackbar from 'react-native-snackbar';
+import CustomToast from "./components/CustomToast";
+import Loading from "./components/Loading";
+import ViewPrescription from "./screens/ViewPrescription";
 const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
 const PatientTabs = createBottomTabNavigator();
 const DoctorTabs = createBottomTabNavigator();
-
 function DoctorTabNavigator() {
-  const { userInfo } = useUserInfo();
+  const [isVisible, setIsVisible] = useState(true);
+  const { userInfo, setUserInfo } = useUserInfo();
   console.log("User Info inside bottom Tab Navigator", userInfo);
   useEffect(() => {
-    // Assuming userInfo.speciality, userInfo.hospitalName are the required fields
     if (!userInfo.speciality || !userInfo.hospitalName) {
-      Snackbar.show({
-        text: 'Please complete your profile',
-        duration: Snackbar.LENGTH_LONG,
-        action: {
-          text: 'UPDATE',
-          textColor: 'green',
-          onPress: () => { /* Navigate to DoctorProfile screen */ },
-        },
-      });
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
     }
-  }, [userInfo]);
+  }, [userInfo, setUserInfo]);
   return (
-    <DoctorTabs.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+    <>
+      <DoctorTabs.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ focused, color, size }) => {
+            let iconName;
 
-          if (route.name === "Show Booking") {
-            iconName = focused
-              ? "ios-information-circle"
-              : "ios-information-circle-outline";
-            // Return the icon component
-            return <MaterialIcons name="dashboard" size={size} color={color} />;
-          } else if (route.name === "ChatList") {
-            return <Ionicons name="chatbox" size={24} color={color} />;
-          } else if (route.name === "DoctorProfile") {
-            return <FontAwesome name="user-circle" size={24} color={color} />;
-          }
-        },
-      })}
-      tabBarOptions={{
-        activeTintColor: "tomato",
-        inactiveTintColor: "gray",
-      }}
-    >
-      <DoctorTabs.Screen
-        name="Show Booking"
-        component={BookingList}
-        initialParams={{ UserId: userInfo.userID, role: userInfo.role }}
-      />
-      {/* <DoctorTabs.Screen
+            if (route.name === "Show Booking") {
+              iconName = focused
+                ? "ios-information-circle"
+                : "ios-information-circle-outline";
+              // Return the icon component
+              return (
+                <MaterialIcons name="dashboard" size={size} color={color} />
+              );
+            } else if (route.name === "ChatList") {
+              return <Ionicons name="chatbox" size={24} color={color} />;
+            } else if (route.name === "DoctorProfile") {
+              return <FontAwesome name="user-circle" size={24} color={color} />;
+            }
+          },
+        })}
+        tabBarOptions={{
+          activeTintColor: "tomato",
+          inactiveTintColor: "gray",
+        }}
+      >
+        <DoctorTabs.Screen
+          name="Show Booking"
+          component={BookingList}
+          initialParams={{ UserId: userInfo.userID, role: userInfo.role }}
+        />
+        {/* <DoctorTabs.Screen
         name="Chat"
         component={Chat}
         initialParams={{ patientUserId: userInfo.userID, role: userInfo.role }}
       /> */}
-      <DoctorTabs.Screen
-        name="ChatList"
-        component={ChatList}
-        initialParams={{ UserId: userInfo.userID, role: userInfo.role }}
-      />
-      <DoctorTabs.Screen name="DoctorProfile" component={DoctorProfile} />
+        <DoctorTabs.Screen
+          name="ChatList"
+          component={ChatList}
+          initialParams={{ UserId: userInfo.userID, role: userInfo.role }}
+        />
+        <DoctorTabs.Screen name="DoctorProfile" component={DoctorProfile} />
 
-      {/* Add other tabs for doctor here */}
-    </DoctorTabs.Navigator>
+        {/* Add other tabs for doctor here */}
+      </DoctorTabs.Navigator>
+      <CustomToast visible={isVisible} message="Please complete your" />
+    </>
   );
 }
 
@@ -171,18 +172,11 @@ function PatientTabNavigator() {
   );
 }
 
-function AuthFlow() {
-  return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="SignIn" component={SignIn} />
-      <AuthStack.Screen name="SignUp" component={SignUp} />
-    </AuthStack.Navigator>
-  );
-}
-
 function MainFlow() {
   const { userInfo } = useUserInfo();
-  console.log("user info: " + JSON.stringify(userInfo));
+  if (!userInfo) {
+    return <Loading />;
+  }
   return userInfo.role === "doctor" ? (
     <DoctorTabNavigator />
   ) : (
@@ -191,24 +185,55 @@ function MainFlow() {
 }
 
 export default function App() {
+  const [userInfo, setUserInfo] = useState(null);
+  const [isUserInfoLoaded, setIsUserInfoLoaded] = useState(false);
+  useEffect(() => {
+    async function loadUserInfo() {
+      const storedUserInfo = await SecureStore.getItemAsync("userInfo");
+      if (storedUserInfo) {
+        setUserInfo(JSON.parse(storedUserInfo));
+      }
+      setIsUserInfoLoaded(true);
+    }
+
+    loadUserInfo();
+  }, []);
+
+  if (!isUserInfoLoaded) {
+    return <Loading />;
+  }
+
   return (
     <UserProvider>
       <NavigationContainer>
-        <MainStack.Navigator screenOptions={{ headerShown: false }}>
-          <MainStack.Screen name="Auth" component={AuthFlow} />
-          <MainStack.Screen name="Main" component={MainFlow} />
-          <MainStack.Screen name="bookAppointment" component={Appointment} />
-          <MainStack.Screen name="bookingList" component={BookingList} />
-          <MainStack.Screen name="bookingDetail" component={BookingDetail} />
-          <MainStack.Screen
-            name="BookingConfirmation"
-            component={BookingConfirmation}
-          />
-          <MainStack.Screen name="PresCription" component={Prescription} />
-          <MainStack.Screen name="PatientProfile" component={PatientProfile} />
-          <MainStack.Screen name="Chat" component={Chat} />
-          <MainStack.Screen name="Payment" component={Payment} />
-        </MainStack.Navigator>
+        {userInfo ? (
+          <MainStack.Navigator screenOptions={{ headerShown: false }}>
+            <MainStack.Screen name="Main" component={MainFlow} />
+            <MainStack.Screen name="bookAppointment" component={Appointment} />
+            <MainStack.Screen name="bookingList" component={BookingList} />
+            <MainStack.Screen name="bookingDetail" component={BookingDetail} />
+            <MainStack.Screen
+              name="BookingConfirmation"
+              component={BookingConfirmation}
+            />
+             <MainStack.Screen name="PatientProfile" component={PatientProfile} options={{ headerShown: true }} />
+            <MainStack.Screen name="Prescription" component={Prescription} />
+            <MainStack.Screen name="Chat" component={Chat} />
+            <MainStack.Screen name="Payment" component={Payment} />
+            <AuthStack.Screen name="SignIn" component={SignIn} />
+            <AuthStack.Screen name="SignUp" component={SignUp} />
+            <AuthStack.Screen name="ViewPrescription" component={ViewPrescription} />
+            <AuthStack.Screen name="EditPrescription" component={Prescription} />
+          </MainStack.Navigator>
+        ) : (
+          <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+            <MainStack.Screen name="Main" component={MainFlow} />
+            <MainStack.Screen name="PatientProfile" component={PatientProfile} options={{ headerShown: true }} />
+            <AuthStack.Screen name="SignIn" component={SignIn} />
+            <AuthStack.Screen name="SignUp" component={SignUp} />
+            <AuthStack.Screen name="ViewPrescription" component={ViewPrescription} />
+          </AuthStack.Navigator>
+        )}
       </NavigationContainer>
     </UserProvider>
   );

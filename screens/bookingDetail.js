@@ -11,21 +11,25 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { firestore } from "../firebaseConfig";
 import SecondryButton from "../components/SecondryButton";
 import Loading from "../components/Loading";
 import { useUserInfo } from "../context/userContext";
+import { query } from "firebase/database";
+import * as Linking from "expo-linking";
 
 const BookingDetail = ({ route, navigation }) => {
-  const { doctorId, patientId, bookingId,userRole } = route.params;
+  const { doctorId, patientId, bookingId, userRole } = route.params;
   const { userInfo } = useUserInfo();
   console.log("User info Inside Booking Details is", userInfo);
   const [bookingDetails, setBookingDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   console.log(
     "doctor id",
     doctorId,
@@ -34,7 +38,8 @@ const BookingDetail = ({ route, navigation }) => {
     "on detail page",
     "bookingId",
     bookingId,
-    "and Role is",userRole
+    "and Role is",
+    userRole
   );
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -67,7 +72,7 @@ const BookingDetail = ({ route, navigation }) => {
       alert("Booking cancelled successfully!");
       // Update the local state to reflect the change immediately
       setBookingDetails({ ...bookingDetails, status: "cancelled" });
-      navigation.navigate('Show Booking', { bookingCanceled: true });
+      navigation.navigate("Show Booking", { bookingCanceled: true });
     } catch (error) {
       alert("Failed to cancel the booking.");
       console.error("Error cancelling booking: ", error);
@@ -75,24 +80,119 @@ const BookingDetail = ({ route, navigation }) => {
       setIsLoading(false); // Stop loading
     }
   };
+  // const startChat = async () => {
+  //   // Assuming you have a function to create a new chat document
+  //   const newChatDoc = {
+  //     patientId: patientId.toString(),
+  //     doctorId: doctorId.toString(),
+  //     userRole:userRole,
+  //     messages: [],
+  //     createdAt: serverTimestamp(),
+  //   };
+  //   addDoc(collection(firestore, "chats"), newChatDoc)
+  //     .then(() => {
+  //       console.log("Chat has been created successfully");
+  //       // Navigate to the chat screen
+  //     })
+  //     .catch((err) => {
+  //       console.error("Error starting chat: ", err);
+  //       alert("Failed to start the chat.");
+  //     });
+  // };
+
+  const handleConnectWhatsApp = async () => {
+    try {
+      // Retrieve the doctor's WhatsApp number from the database
+      const doctorRef = doc(firestore, "users", doctorId);
+      const doctorSnap = await getDoc(doctorRef);
+
+      if (doctorSnap.exists()) {
+        const doctorData = doctorSnap.data();
+        console.log("Doctor Data", doctorData);
+        const whatsappNumber = doctorData.phoneNumber; // assuming the field is named whatsappNumber
+
+        // Use Linking to open WhatsApp with the doctor's number
+        const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}`;
+        const canOpen = await Linking.canOpenURL(whatsappUrl);
+
+        if (canOpen) {
+          Linking.openURL(whatsappUrl);
+        } else {
+          alert(
+            "Cannot open WhatsApp. Please make sure WhatsApp is installed."
+          );
+        }
+      } else {
+        console.log("No such doctor!");
+      }
+    } catch (error) {
+      console.error("Error connecting to WhatsApp: ", error);
+      alert("An error occurred while trying to connect to WhatsApp.");
+    }
+  };
+
   const startChat = async () => {
-    // Assuming you have a function to create a new chat document
-    const newChatDoc = {
-      patientId: patientId.toString(),
-      doctorId: doctorId.toString(),
-      userRole:userRole,
-      messages: [],
-      createdAt: serverTimestamp(),
-    };
-    addDoc(collection(firestore, "chats"), newChatDoc)
-      .then(() => {
-        console.log("Chat has been created successfully");
-        // Navigate to the chat screen
-      })
-      .catch((err) => {
-        console.error("Error starting chat: ", err);
-        alert("Failed to start the chat.");
-      });
+    try {
+      // Check if a chat already exists between the patient and doctor
+      const chatsRef = collection(firestore, "chats");
+      const q = query(
+        chatsRef,
+        where("patientId", "==", patientId.toString()),
+        where("doctorId", "==", doctorId.toString())
+      );
+
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        // Chat already exists, navigate to it
+        const existingChatId = querySnapshot.docs[0].id;
+        navigation.navigate("Chat", { chatId: existingChatId });
+      } else {
+        // No chat exists, create a new one
+        const newChatDoc = {
+          patientId: patientId.toString(),
+          doctorId: doctorId.toString(),
+          userRole: userRole,
+          messages: [],
+          createdAt: serverTimestamp(),
+        };
+        const docRef = await addDoc(collection(firestore, "chats"), newChatDoc);
+        navigation.navigate("Chat", { chatId: docRef.id });
+      }
+    } catch (err) {
+      console.error("Error in starting chat: ", err);
+      alert("Failed to start the chat.");
+    }
+  };
+
+  const handleWritePrescription = async () => {
+    try {
+      const prescriptionsRef = collection(firestore, "prescriptions");
+      const q = query(
+        prescriptionsRef,
+        where("patientId", "==", bookingDetails.patientId),
+        where("doctorId", "==", bookingDetails.doctorId)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Prescription exists, navigate to view it
+        const existingPrescriptionId = querySnapshot.docs[0].id;
+        navigation.navigate("ViewPrescription", {
+          prescriptionId: existingPrescriptionId,
+        });
+      } else {
+        // No prescription exists, navigate to create a new one
+        navigation.navigate("Prescription", {
+          patientName: bookingDetails.patientName,
+          patientId: bookingDetails.patientId,
+          doctorId: bookingDetails.doctorId,
+        });
+      }
+    } catch (error) {
+      console.error("Error checking for existing prescription: ", error);
+      alert("An error occurred while checking for an existing prescription.");
+    }
   };
 
   if (isLoading) {
@@ -140,25 +240,41 @@ const BookingDetail = ({ route, navigation }) => {
           <Text style={styles.tableCellValue}>{bookingDetails.status}</Text>
         </View>
       </View>
-      {bookingDetails.status === "cancelled" ||
-      bookingDetails.status === "completed" ? null : (
-        <View style={styles.buttonRow}>
-          <SecondryButton buttonText="Cancel Booking" onPress={cancelBooking} />
+      {/* Button Logic Based on Status and Role */}
+      {bookingDetails.status === "upcoming" && (
+        <View style={styles.buttonContainer}>
+          <View style={styles.buttonRow}>
+            <SecondryButton buttonText="Start Chat" onPress={startChat} />
+            <SecondryButton
+              buttonText="Cancel Booking"
+              onPress={cancelBooking}
+            />
+          </View>
+          {userInfo.role === "doctor" && (
+            <SecondryButton
+              buttonText="Write Prescription"
+              onPress={handleWritePrescription}
+            />
+          )}
         </View>
       )}
-      <View style={styles.buttonRow}>
-        {userInfo.role === "doctor" && bookingDetails.status === "upcoming" && (
-          <SecondryButton
-            buttonText="Write Prescription"
-            onPress={() =>
-              navigation.navigate("Prescription", {
-                bookingId: bookingDetails.id,
-              })
-            }
-          />
+
+      {bookingDetails.status === "completed" && (
+        <View style={styles.button}>
+          <SecondryButton buttonText="Start Chat" onPress={startChat} />
+        </View>
+      )}
+
+      {userInfo.role === "patient" &&
+        bookingDetails.status === "upcoming" &&
+        bookingDetails.appointmentType === "Video Call" && (
+          <View style={styles.buttonContainer}>
+            <SecondryButton
+              buttonText="Connect WhatsApp"
+              onPress={handleConnectWhatsApp}
+            />
+          </View>
         )}
-        <SecondryButton buttonText="Start Chat" onPress={startChat} />
-      </View>
     </View>
   );
 };
@@ -194,11 +310,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     width: "50%",
   },
+  buttonContainer: {
+    width: "100%",
+    marginTop: 30,
+  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginTop: 50,
+    marginBottom: 30,
   },
+  button: {},
   // Add other styles as needed
 });
 

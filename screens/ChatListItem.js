@@ -1,16 +1,23 @@
-import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { Image, TouchableOpacity, View, StyleSheet, Text } from "react-native";
-import { firestore } from "../firebaseConfig";
 
-const ChatListItem = ({ chat, onPress, userId }) => {
-  const { opponentDetails, lastMessage } = chat;
+import { Image, TouchableOpacity, View, StyleSheet, Text } from "react-native";
+import Icon from "react-native-vector-icons/FontAwesome";
+const ChatListItem = ({ chat, onPress, userId ,ChatId}) => {
+  const { opponentDetails } = chat;
   console.log("Opponent Detail is>>", opponentDetails);
   return (
     <TouchableOpacity onPress={onPress} style={styles.chatItem}>
-      <Image source={{ uri: opponentDetails.image }} style={styles.avatar} />
+      {
+        opponentDetails.image ? (
+          <Image source={{ uri: opponentDetails.image }} style={styles.avatar} />
+        ) :(
+          <Text style={styles.iconContainer}>
+          <Icon name="user-circle-o" size={50} color="#000" />
+        </Text>
+        )
+      }
       <View style={styles.chatDetails}>
         <Text style={styles.userName}>{opponentDetails.name}</Text>
+        <Text style={styles.userName}>Chat ID: {ChatId}</Text>
         {opponentDetails.speciality && (
           <Text style={styles.lastMessage}>{opponentDetails.speciality}</Text>
         )}
@@ -74,6 +81,13 @@ const styles = StyleSheet.create({
   unreadCountText: {
     color: "white",
     fontSize: 12,
+  },
+  iconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    paddingTop: 10,
+    paddingLeft: 10,
   },
 });
 

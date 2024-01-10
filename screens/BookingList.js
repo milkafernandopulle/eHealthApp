@@ -9,13 +9,12 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-// import { AntDesign } from '@expo/vector-icons';
+import moment from 'moment';
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 import { firestore } from "../firebaseConfig";
 import { useUserInfo } from "../context/userContext";
-// import { Icon } from 'react-native-vector-icons/Icon';
 const BookingList = ({ route }) => {
   const [activeTab, setActiveTab] = useState("upcoming");
   const navigation = useNavigation();
@@ -67,6 +66,77 @@ const BookingList = ({ route }) => {
   }, [userInfo.userID, userInfo.role, refreshTrigger]);
   console.log("Booking List is:", bookingList);
 
+  const parseBookingDateTime = (selectedDate, selectedTime) => {
+    // Assuming selectedDate format is 'ddd D MMM' and does not include year
+    const dateParts = selectedDate.split(' ').slice(1).join(' '); // Removes day of week
+  
+    const currentYear = new Date().getFullYear();
+    let dateTimeString = `${dateParts} ${currentYear} ${selectedTime}`;
+    let parsedDate = moment(dateTimeString, 'D MMM YYYY hh:mm A');
+  
+    // If the date has already passed, assume it is for the next year
+    if (parsedDate.isBefore(moment())) {
+      dateTimeString = `${dateParts} ${currentYear + 1} ${selectedTime}`;
+      parsedDate = moment(dateTimeString, 'D MMM YYYY hh:mm A');
+    }
+  
+    if (!parsedDate.isValid()) {
+      console.error('Invalid date:', dateTimeString);
+      return null;
+    }
+  
+    return parsedDate.toDate();
+  };
+  
+  
+  
+  
+  useEffect(() => {
+    const updateBookingStatuses = async () => {
+      const now = moment(); // Current time in Moment.js
+      console.log("Now is",now);
+      let hasUpdates = false;
+  
+      const updatedBookings = bookingList.map((booking) => {
+        const bookingDateTime = parseBookingDateTime(booking.selectedDate, booking.selectedTime);
+  
+        // Check if the bookingDateTime is valid and the booking is upcoming
+        if (booking.status === 'upcoming') {
+          // Convert bookingDateTime to a moment object for comparison
+          const bookingMoment = moment(bookingDateTime);
+             console.log("booking Moment", bookingMoment);
+          // Check if the booking date and time are in the past
+          if (now.isAfter(bookingMoment)) {
+            console.log("Booking is in the past, marking as completed:", booking);
+            hasUpdates = true;
+            return { ...booking, status: 'completed' };
+          }
+        }
+        return booking;
+      });
+  
+      if (hasUpdates) {
+        setBookingList(updatedBookings);
+        await updateBookingsInDb(updatedBookings.filter(b => b.status === 'completed'));
+      }
+    };
+  
+    if (bookingList.length > 0) {
+      updateBookingStatuses();
+    }
+  }, [bookingList]);
+  
+  
+
+  const updateBookingsInDb = async (bookingsToUpdate) => {
+    bookingsToUpdate.forEach(async (booking) => {
+      const bookingRef = doc(firestore, "bookings", booking.id);
+      await updateDoc(bookingRef, {
+        status: 'completed'
+      });
+    });
+  };
+
   useEffect(() => {
     // Refetch bookings when the screen comes into focus or a booking is canceled
     const unsubscribeFocus = navigation.addListener("focus", (e) => {
@@ -89,8 +159,8 @@ const BookingList = ({ route }) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   }
 
-  // console.log("Booking List inside Booking List Component",BookingList);
-
+  console.log("Booking List inside Booking List Component",BookingList);
+  console.log("User info inside Booking List is", userInfo);
   const renderBookingItem = ({ item }) => {
     console.log("Item inside BookinG List is >>>>>>", item);
     return (
@@ -108,17 +178,28 @@ const BookingList = ({ route }) => {
         <View style={styles.doctorInfo}>
           {item.dcoctorProfile ? (
             <Image
-              source={{ uri: userInfo.role==="role" ? item.dcoctorProfile : item.patientProfile }}
+              source={{
+                uri:
+                  userInfo.role === "doctor"
+                    ? item.patientProfile
+                    : item.dcoctorProfile,
+              }}
               style={styles.doctorImage}
             />
           ) : (
-              <Text style={styles.iconContainer}>
-                <Icon name="user-circle-o" size={50} color="#000" />
-              </Text>
+            <Text style={styles.iconContainer}>
+              <Icon name="user-circle-o" size={50} color="#000" />
+            </Text>
           )}
           <View style={styles.infoContainer}>
-            <Text style={styles.doctorName}>{item.patientName}</Text>
+            {userInfo.role === "doctor" ? (
+              <Text style={styles.doctorName}>{item.patientName}</Text>
+              ) : (
+                <Text style={styles.doctorName}>{item.doctorName}</Text>
+            )}
             <Text style={styles.bookingAddress}>Status: {item.status}</Text>
+            <Text style={styles.bookingAddress}>Booking Time: {item.selectedTime}</Text>
+            <Text style={styles.bookingAddress}>Booking Date: {item.selectedDate}</Text>
             <Text style={styles.bookingId}>Booking ID : {item.id}</Text>
           </View>
         </View>
@@ -213,14 +294,14 @@ const styles = StyleSheet.create({
   doctorImage: {
     width: 70,
     height: 70,
-    borderRadius: 8
+    borderRadius: 8,
   },
   iconContainer: {
     width: 70,
     height: 70,
     borderRadius: 8,
-    paddingTop:10,
-    paddingLeft:10
+    paddingTop: 10,
+    paddingLeft: 10,
   },
   doctorName: {
     fontSize: 16,
@@ -229,7 +310,7 @@ const styles = StyleSheet.create({
   bookingAddress: {
     fontSize: 14,
     color: "#666",
-    marginVertical: 5,
+    marginVertical: 2,
   },
   bookingId: {
     fontSize: 12,

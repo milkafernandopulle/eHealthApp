@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Pressable,
 } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import * as ImagePicker from "expo-image-picker";
@@ -16,6 +17,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { auth, firestore } from "../firebaseConfig";
 import { useUserInfo } from "../context/userContext";
 import { doc, updateDoc } from "firebase/firestore";
+import { AntDesign } from '@expo/vector-icons';
 
 const PatientProfile = ({ navigation }) => {
   const [name, setName] = useState("");
@@ -24,9 +26,26 @@ const PatientProfile = ({ navigation }) => {
   const [hospitalName, setHospitalName] = useState("");
   const [speciality, setSpeciality] = useState("");
   const [image, setImage] = useState(null);
-  const { userInfo } = useUserInfo();
+  const { userInfo, logout } = useUserInfo();
   const [isValid, setIsValid] = useState(true); // New state for form validation
   const [errorMessage, setErrorMessage] = useState('');
+
+  
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+       <View style={styles.topButton}> 
+       <Pressable   onPress={() => handleLogout()} >
+        <View style={styles.innerButtonConatiner}>
+        <AntDesign name="logout" size={28} color="black" />
+          <Text style={styles.buttonText}>Logout</Text>
+        </View>
+       </Pressable>
+       </View>
+      ),
+    });
+  }, [navigation, logout]);
+
   useEffect(() => {
     console.log("the user Info received from global state inside patient profile is",userInfo);
     if (userInfo) {
@@ -74,6 +93,11 @@ const PatientProfile = ({ navigation }) => {
       alert("Error updating profile.");
       console.error("Error updating profile:", error);
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigation.navigate("SignIn");
   };
 
   return (
@@ -189,6 +213,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
+  topButton:{
+    width:100,
+    marginRight:20
+  },
+  innerButtonConatiner:{
+    flexDirection:"row",
+    justifyContent:"space-around"
+  },
+  buttonText:{
+     fontSize:18,
+     fontWeight:"bold",
+     color:"black"
+  }
 });
 
 export default PatientProfile;

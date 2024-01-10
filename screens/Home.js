@@ -6,16 +6,6 @@ import { useNavigation } from '@react-navigation/native';
 const Home = ({DoctorList}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
-  const [doctors, setDoctors] = useState([
-    {id:1, name: 'Dr. Ayesha', specialty: 'Cardiologist', rating: 5, hospital: 'City Hospital' },
-    {id:2, name: 'Dr. John Doe', specialty: 'Dentist', rating: 4, hospital: 'General Hospital' },
-    {id:3, name: 'Dr. Jane Smith', specialty: 'Pediatrician', rating: 4.5, hospital: 'Kids Care' },
-    {id:4, name: 'Dr. Emily Jones', specialty: 'Dermatologist', rating: 4.7, hospital: 'Skin Center' },
-    {id:5, name: 'Dr. William Brown', specialty: 'Neurologist', rating: 5, hospital: 'Brain Health Institute' },
-    {id:6, name: 'Dr. Linda Taylor', specialty: 'Psychologist', rating: 4.5, hospital: 'Mind Wellness Clinic' },
-    {id:7, name: 'Dr. Michael Davis', specialty: 'Orthopedic', rating: 4.8, hospital: 'Ortho Care' },
-    // ... add more doctors as needed
-  ]);
  console.log("Dcotor List inside Home",DoctorList);
   const filteredDoctors = DoctorList.filter(doctor => {
     const doctorData = `${doctor?.name?.toLowerCase()} ${doctor?.speciality?.toLowerCase()} ${doctor?.hospitalName?.toLowerCase()}`;

@@ -4,81 +4,68 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { firestore } from "../firebaseConfig";
 import Loading from "../components/Loading";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useUserInfo } from "../context/userContext";
 
 const PatientPrescription = ({ route }) => {
-  // Assume we have a prescriptionId passed through route params
-  //   const { prescriptionId } = route.params;
-  const prescriptionId = "sbEfj8FGu2gs0b4aNdY3";
-  const [prescriptionData, setPrescriptionData] = useState("");
+  const { userInfo } = useUserInfo();
+  const patientId  = userInfo.userID; // Assuming you have the patient ID
+
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPrescriptionData = async () => {
+    const fetchPrescriptions = async () => {
       try {
-        // console.log("ID>>>>>",prescriptionId);
-        const docRef = doc(firestore, "prescriptions", prescriptionId);
-        const docSnap = await getDoc(docRef);
-        // console.log("doc snapshot", docSnap);
-        if (docSnap.exists()) {
-          setPrescriptionData(docSnap.data());
-        } else {
-          console.log("No such prescription!");
-        }
+        const prescriptionsRef = collection(firestore, "prescriptions");
+        const q = query(prescriptionsRef, where("patientId", "==", patientId));
+        const querySnapshot = await getDocs(q);
+        const prescriptionsData = [];
+
+        querySnapshot.forEach((doc) => {
+          if (doc.exists()) {
+            prescriptionsData.push({ id: doc.id, ...doc.data() });
+          }
+        });
+
+        setPrescriptions(prescriptionsData);
       } catch (error) {
-        console.error("Error fetching prescription data: ", error);
+        console.error("Error fetching prescriptions: ", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchPrescriptionData();
-  }, []);
-
-  // if (!prescriptionData) {
-  //   return <Loading />;
-  // }
-  const source = {
-    html: prescriptionData.prescription || "", // Ensure you have a fallback in case it's undefined
-  };
-  console.log("Prescription data", prescriptionData);
-
-  const handleEdit = () => {
-    // Logic for handling edit
-  };
-
-  const handleDelete = () => {
-    // Logic for handling delete
-  };
+    fetchPrescriptions();
+  }, [patientId]);
 
   return (
     <>
-      {prescriptionData ? (
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.doctorName}>
-            Doctor: {prescriptionData.doctorName}
-          </Text>
-          <View style={styles.prescriptionContainer}>
-            {/* Render the prescription HTML content using RenderHtml */}
-            <RenderHtml
-              contentWidth={50} // You need to specify the contentWidth prop
-              source={source}
-            />
-            {/* <TouchableOpacity onPress={handleEdit} style={styles.iconButton}>
-              <MaterialIcons name="edit" size={24} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} style={styles.iconButton}>
-              <MaterialIcons name="delete" size={24} color="#000" />
-            </TouchableOpacity> */}
-          </View>
-        </ScrollView>
-      ) : (
+      {isLoading ? (
+        <Loading />
+      ) : prescriptions.length === 0 ? (
         <View style={styles.message}>
-          <Text>No Prescription found!</Text>
+          <Text>No Prescriptions found!</Text>
         </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.container}>
+          {prescriptions.map((prescription) => (
+            <View key={prescription.id} style={styles.prescriptionContainer}>
+              <Text style={styles.doctorName}>
+                Doctor: {prescription.doctorName}
+              </Text>
+              {/* Render the prescription HTML content using RenderHtml */}
+              <RenderHtml
+                contentWidth={50} // You need to specify the contentWidth prop
+                source={{ html: prescription.prescription || "" }}
+              />
+            </View>
+          ))}
+        </ScrollView>
       )}
     </>
   );
@@ -99,27 +86,12 @@ const styles = StyleSheet.create({
     borderColor: "gray",
     padding: 15,
     borderRadius: 8,
-  },
-  prescriptionContent: {
-    fontSize: 16,
-  },
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "red",
-  },
-  iconButton: {
-    padding: 8,
-    marginLeft: 5, // To give some space between the HTML content and icons
-    borderWidth: 2,
-    borderColor: "red",
+    marginBottom: 20,
   },
   message: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
 });
 

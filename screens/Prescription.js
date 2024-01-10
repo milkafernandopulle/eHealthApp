@@ -12,19 +12,22 @@ import { firestore } from "../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
 import PrimaryButton from "../components/PrimaryButton";
 
-const Prescription = ({ route }) => {
-  const [patientName, setPatientName] = useState("");
+const Prescription = ({ route ,params,navigation }) => {
+  const {patientName,patientId,doctorId} = route.params;
   const richText = useRef();
-
+   console.log("IDDDD",patientName,patientId,doctorId);
   const savePrescription = async () => {
     let html = await richText.current?.getContentHtml();
     try {
       const docRef = await addDoc(collection(firestore, "prescriptions"), {
+        patientId,
         patientName,
+        doctorId,
         prescription: html,
       });
       console.log("Document written with ID: ", docRef.id);
       alert("Prescription saved successfully!");
+      navigation.navigate("Show Booking");
     } catch (e) {
       console.error("Error adding document: ", e);
       alert("Failed to save the prescription.");
@@ -36,9 +39,10 @@ const Prescription = ({ route }) => {
       <Text style={styles.label}>Patient Name</Text>
       <TextInput
         value={patientName}
-        onChangeText={setPatientName}
+        // onChangeText={setPatientName}
         style={styles.input}
         placeholder="Enter patient's name"
+        editable={false}
       />
       <Text style={styles.label}>Prescription</Text>
       <RichEditor

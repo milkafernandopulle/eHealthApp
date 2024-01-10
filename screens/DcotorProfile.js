@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Button,
+  Pressable,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { AntDesign } from "@expo/vector-icons";
+import { Calendar } from "react-native-calendars";
+import moment from "moment";
+import { Picker } from "@react-native-picker/picker";
 import PrimaryButton from "../components/PrimaryButton";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { auth, firestore } from "../firebaseConfig";
 import { useUserInfo } from "../context/userContext";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 const DoctorProfile = ({ navigation }) => {
   const [name, setName] = useState("");
@@ -23,30 +30,96 @@ const DoctorProfile = ({ navigation }) => {
   const [role, setRole] = useState("");
   const [hospitalName, setHospitalName] = useState("");
   const [speciality, setSpeciality] = useState("");
-  const [availability, setAvailability] = useState("");
   const [image, setImage] = useState(null);
   const [isValid, setIsValid] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
-  const { userInfo } = useUserInfo();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
+  const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
+  const [phoneNumber, setPhoneNumber] = useState("");
 
+  const { userInfo, logout } = useUserInfo();
+  const hours = Array.from({ length: 24 }, (_, index) => index);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.topButton}>
+          <Pressable onPress={() => handleLogout()}>
+            <View style={styles.innerButtonConatiner}>
+              <AntDesign name="logout" size={28} color="black" />
+              <Text style={styles.buttonText}>Logout</Text>
+            </View>
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [navigation, logout]);
+  // useEffect(() => {
+  //   if (userInfo) {
+  //     console.log(
+  //       "The user Info we received inside doctor Profile Page is",
+  //       userInfo
+  //     );
+  //     setName(userInfo.name);
+  //     setEmail(userInfo.email);
+  //     setRole(userInfo.role);
+  //     setHospitalName(userInfo.hospitalName);
+  //     // setAvailability(userInfo.availability);
+  //     setSpeciality(userInfo.speciality);
+  //     // Fetch the image from Firestore if it exists
+  //     if (userInfo.image) {
+  //       setImage(userInfo.image);
+  //     }
+  //   }
+  // }, [userInfo]);
   useEffect(() => {
-    if (userInfo) {
-      console.log(
-        "The user Info we received inside doctor Profile Page is",
-        userInfo
-      );
-      setName(userInfo.name);
-      setEmail(userInfo.email);
-      setRole(userInfo.role);
-      setHospitalName(userInfo.hospitalName);
-      setAvailability(userInfo.availability);
-      setSpeciality(userInfo.speciality);
-      // Fetch the image from Firestore if it exists
-      if (userInfo.image) {
-        setImage(userInfo.image);
+    const fetchDoctorDetails = async () => {
+      try {
+        // Replace this with your actual database fetching logic
+        const docRef = doc(firestore, "users", userInfo.userID);
+        const docSnap = await getDoc(docRef);
+        const data = docSnap.data();
+        console.log("The Doc Snap Got from Db is >>>", data);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setName(data.name);
+          setEmail(data.email);
+          setHospitalName(data.hospitalName);
+          setSpeciality(data.speciality);
+          setImage(data.image);
+          setRole(data.role);
+
+          // Handling dates and times
+          if (data.startDate) {
+            setStartDate(data.startDate);
+          }
+          if (data.endDate) {
+            setEndDate(data.endDate);
+          }
+          if (data.formattedStartTime) {
+            const [hours, minutes] = data.formattedStartTime.split(":");
+            setStartTime(new Date(0, 0, 0, hours, minutes));
+          }
+          if (data.formattedEndTime) {
+            const [hours, minutes] = data.formattedEndTime.split(":");
+            setEndTime(new Date(0, 0, 0, hours, minutes));
+          }
+          if (data.phoneNumber) {
+            setPhoneNumber(data.phoneNumber);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching doctor details:", error);
       }
-    }
-  }, [userInfo]);
+    };
+
+    fetchDoctorDetails();
+  }, []);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -61,21 +134,50 @@ const DoctorProfile = ({ navigation }) => {
     }
   };
 
+  const isPhoneNumberValid = (number) => {
+    const minPhoneNumberLength = 11;
+    return number.length >= minPhoneNumberLength;
+  };
+
   const updateProfile = async () => {
-    if (!name || !email || !role || !hospitalName || !speciality || !availability) {
+    const formattedDate = selectedDate;
+    const formattedStartTime = `${startTime.getHours()}:00`; // Format time as 'HH:MM'
+    const formattedEndTime = `${endTime.getHours()}:00`; // Format time as 'HH:MM'
+    if (
+      !name ||
+      !email ||
+      !role ||
+      !hospitalName ||
+      !speciality ||
+      !startDate ||
+      !endDate ||
+      !formattedStartTime ||
+      !formattedEndTime ||
+      !phoneNumber
+    ) {
       setIsValid(false);
-      setErrorMessage('All fields are required'); // Set error message
+      setErrorMessage("All fields are required"); // Set error message
       return; // Stop the function if validation fails
     }
+    if (!isPhoneNumberValid(phoneNumber)) {
+      setIsValid(false);
+      setErrorMessage("Phone number must be at least 11 digits.");
+      return;
+    }
+
     setIsValid(true);
-    setErrorMessage('');
+    setErrorMessage("");
     try {
       const userRef = doc(firestore, "users", userInfo.userID);
       await updateDoc(userRef, {
         hospitalName,
         speciality,
         image,
-        availability,
+        startDate,
+        endDate,
+        formattedStartTime,
+        formattedEndTime,
+        phoneNumber,
       });
       alert("Profile updated successfully!");
       navigation.goBack();
@@ -84,9 +186,54 @@ const DoctorProfile = ({ navigation }) => {
       console.error("Error updating profile:", error);
     }
   };
+  const onStartDateConfirm = (day) => {
+    setStartDatePickerVisible(false);
+    setStartDate(day.dateString);
+  };
 
+  const onEndDateConfirm = (day) => {
+    setEndDatePickerVisible(false);
+    if (day.dateString >= startDate) {
+      setEndDate(day.dateString);
+    } else {
+      alert("End date must be after start date.");
+    }
+  };
+  const getMarkedDates = (startDate, endDate) => {
+    let dates = {};
+    let current = moment(startDate);
+    const end = moment(endDate);
+
+    while (current.diff(end) <= 0) {
+      const dateString = current.format("YYYY-MM-DD");
+      dates[dateString] = {
+        selected: true,
+        color:
+          startDate === dateString || endDate === dateString
+            ? "green"
+            : "lightgreen",
+        textColor: "white",
+      };
+      current.add(1, "days");
+    }
+    return dates;
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigation.navigate("SignIn");
+  };
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingBottom: 150,
+      }}
+      resetScrollToCoords={{ x: 0, y: 0 }}
+      scrollEnabled={true}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
@@ -116,7 +263,12 @@ const DoctorProfile = ({ navigation }) => {
             style={styles.input}
           />
           <Text style={styles.label}>Role</Text>
-          <TextInput value={role} onChangeText={setRole} style={styles.input} />
+          <TextInput
+            value={role}
+            onChangeText={setRole}
+            style={styles.input}
+            editable={false}
+          />
           <Text style={styles.label}>Hospital Name</Text>
           <TextInput
             placeholder="Hospital Name"
@@ -131,44 +283,102 @@ const DoctorProfile = ({ navigation }) => {
             onChangeText={setSpeciality}
             style={styles.input}
           />
+          <Text style={styles.label}>Phone Number</Text>
+          <TextInput
+            value={phoneNumber}
+            onChangeText={(text) => {
+              setIsValid(true); // Reset validation
+              setPhoneNumber(text.replace(/[^0-9]/g, "")); // Allow numbers only
+            }}
+            keyboardType="phone-pad"
+            placeholder="Enter phone number"
+            style={styles.input}
+          />
+          {!isPhoneNumberValid(phoneNumber) && phoneNumber.length > 0 && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Please enter a valid phone number with minimum 11 digits.
+              </Text>
+            </View>
+          )}
           <Text style={styles.label}>Availability</Text>
-          <View style={styles.radioGroup}>
-            <TouchableOpacity
-              style={styles.radioContainer}
-              onPress={() => setAvailability("Yes")}
-            >
-              <View
-                style={[
-                  styles.outerCircle,
-                  availability === "Yes" && styles.selectedOuterCircle,
-                ]}
+          <View style={styles.availabilityContainer}>
+            <View style={styles.dateRangeContainer}>
+              <Pressable
+                style={styles.selectDate}
+                onPress={() => setStartDatePickerVisible(true)}
               >
-                {availability === "Yes" && <View style={styles.innerCircle} />}
-              </View>
-              <Text style={styles.radioText}>Yes</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.radioContainer}
-              onPress={() => setAvailability("No")}
-            >
-              <View
-                style={[
-                  styles.outerCircle,
-                  availability === "No" && styles.selectedOuterCircle,
-                ]}
+                <Text>
+                  {startDate ? `Start Date: ${startDate}` : "Select Start Date"}
+                </Text>
+              </Pressable>
+              {isStartDatePickerVisible && (
+                <Calendar
+                  onDayPress={onStartDateConfirm}
+                  markedDates={getMarkedDates(startDate, endDate)}
+                  minDate={moment().format("YYYY-MM-DD")}
+                />
+              )}
+
+              <Pressable
+                style={styles.selectDate}
+                onPress={() => setEndDatePickerVisible(true)}
               >
-                {availability === "No" && <View style={styles.innerCircle} />}
-              </View>
-              <Text style={styles.radioText}>No</Text>
-            </TouchableOpacity>
+                <Text>
+                  {endDate ? `End Date: ${endDate}` : "Select End Date"}
+                </Text>
+              </Pressable>
+              {isEndDatePickerVisible && (
+                <Calendar
+                  onDayPress={onEndDateConfirm}
+                  markedDates={getMarkedDates(startDate, endDate)}
+                  minDate={startDate || moment().format("YYYY-MM-DD")}
+                />
+              )}
+            </View>
+            <Text style={styles.label}>Start Time</Text>
+            <View style={styles.timePicker}>
+              <Picker
+                selectedValue={startTime.getHours()}
+                style={styles.timePicker}
+                onValueChange={(itemValue) => {
+                  const newStartTime = new Date(startTime);
+                  newStartTime.setHours(itemValue);
+                  newStartTime.setMinutes(0);
+                  setStartTime(newStartTime);
+                }}
+                mode="dropdown"
+              >
+                {hours.map((hour) => (
+                  <Picker.Item key={hour} label={`${hour}:00`} value={hour} />
+                ))}
+              </Picker>
+            </View>
+            <Text style={styles.label}>End Time</Text>
+            <View style={styles.timePicker}>
+              <Picker
+                selectedValue={endTime.getHours()}
+                onValueChange={(itemValue) => {
+                  const newEndTime = new Date(endTime);
+                  newEndTime.setHours(itemValue);
+                  newEndTime.setMinutes(0);
+                  setEndTime(newEndTime);
+                }}
+                mode="dropdown"
+              >
+                {hours.map((hour) => (
+                  <Picker.Item key={hour} label={`${hour}:00`} value={hour} />
+                ))}
+              </Picker>
+            </View>
           </View>
         </View>
         <View style={styles.buttonContainer}>
-        {!isValid && <Text style={styles.errorText}>{errorMessage}</Text>}
-        <PrimaryButton buttonText="Update Profile" onPress={updateProfile} />
+          {!isValid && <Text style={styles.errorText}>{errorMessage}</Text>}
+          <PrimaryButton buttonText="Update Profile" onPress={updateProfile} />
         </View>
       </KeyboardAvoidingView>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 };
 
@@ -178,6 +388,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    paddingBottom: 50,
   },
   profileImage: {
     width: 100,
@@ -186,15 +397,15 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignItems: "center",
-    position: "relative", // Add this to position your edit icon absolutely
+    position: "relative",
     marginBottom: 20,
   },
   iconContainer: {
-    position: "absolute", // Position the icon over the image
+    position: "absolute",
     right: 62,
     top: 17,
-    backgroundColor: "red", // Your icon background color
-    borderRadius: 20, // Circular background
+    backgroundColor: "red",
+    borderRadius: 20,
     padding: 4,
   },
   editIcon: {
@@ -265,9 +476,44 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   errorText: {
-    color: 'red',
-    textAlign: 'center',
+    color: "red",
+    textAlign: "center",
     marginBottom: 10,
+  },
+  calendarContainer: {
+    marginBottom: 20,
+  },
+  selectDate: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "gray",
+    borderRadius: 6,
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timePicker: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "gray",
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  topButton: {
+    width: 100,
+    marginRight: 20,
+  },
+  innerButtonConatiner: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "black",
+  },
+  errorContainer: {
+    width: 250,
   },
 });
 

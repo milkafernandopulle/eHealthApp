@@ -8,6 +8,7 @@ import {
   Image,
   ImageBackground,
 } from "react-native";
+import * as SecureStore from 'expo-secure-store';
 import PrimaryButton from "../components/PrimaryButton";
 import { auth, firestore } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
@@ -42,11 +43,13 @@ const SignIn = ({ navigation }) => {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
     } else {
+    try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
         password
       );
+      await SecureStore.setItemAsync('userToken', userCredential.user.accessToken);
       const userDoc = await getDoc(
         doc(firestore, "users", userCredential.user.uid)
       );
@@ -63,15 +66,41 @@ const SignIn = ({ navigation }) => {
           image: userInfo?.image,
           speciality: userInfo?.speciality,
         });
+        await SecureStore.setItemAsync('userInfo', JSON.stringify({
+          role: userInfo?.role,
+          userID: userCredential?.user.uid,
+          email: userInfo?.email,
+          name: userInfo?.name,
+          availability: userInfo?.availability,
+          hospitalName: userInfo?.hospitalName,
+          image: userInfo?.image,
+          speciality: userInfo?.speciality,
+        }))
         navigation.navigate("Main");
+        // if (userInfo.role === 'doctor') {
+        //   navigation.navigate("doctorTabs");
+        // } else if (userInfo.role === 'patient') {
+        //   navigation.navigate("patientTabs");
+        // }
         setEmail("");
         setPassword("");
       } else {
         console.log("No user data found in Firestore");
         setErrors({ firebase: "No user data found." });
       }
+    } catch (error) {
+      setErrors({ password: "Please Enter Correct Password." });
+      console.log("Error: " + error);
+    }
     }
   };
+
+  const handleNavigate =()=>{
+   navigation.navigate("SignUp");
+   setEmail("");
+   setPassword("");
+   setErrors("");
+  }
 
   return (
     <ImageBackground
@@ -114,6 +143,7 @@ const SignIn = ({ navigation }) => {
               color="grey"
             />
           </TouchableOpacity>
+          <View style={styles.errorContainer}>
           {errors.password && (
             <Text style={styles.errorText}>{errors.password}</Text>
           )}
@@ -121,6 +151,7 @@ const SignIn = ({ navigation }) => {
           {errors.firebase && (
             <Text style={styles.errorText}>{errors.firebase}</Text>
           )}
+          </View>
           <TouchableOpacity>
             <Text style={styles.forgotPassword}>Forgot Password?</Text>
           </TouchableOpacity>
@@ -132,7 +163,7 @@ const SignIn = ({ navigation }) => {
             <Text style={styles.dividerText}>Or</Text>
             <View style={styles.divider} />
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+          <TouchableOpacity onPress={handleNavigate}>
             <Text style={styles.signUpText}>
               Don’t have an account? Sign Up
             </Text>
@@ -223,6 +254,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.15)", // Adjust the last value for more/less opacity
   },
+  errorContainer:{
+    height:50
+  },
   errorText: {
     color: "red",
     fontSize: 14,
@@ -247,7 +281,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: "absolute",
     right: 35,
-    top: 58,
+    top:  33,
     height: "100%",
     justifyContent: "center",
     alignItems: "center",

@@ -11,107 +11,6 @@ import {
 import { firestore } from "../firebaseConfig";
 import ChatListItem from "./ChatListItem";
 
-// Dummy data for chats
-const chatsData = [
-  {
-    id: "1",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "2",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "3",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "4",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "5",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "6",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "7",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "8",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "9",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "10",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "11",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  {
-    id: "12",
-    userName: "John Doe",
-    avatarUri: "https://via.placeholder.com/150",
-    lastMessage: "Hey, how are you?",
-    time: "15:00",
-    unreadCount: 2,
-  },
-  // ... more chat data
-];
-
 const ChatList = ({ navigation, route }) => {
   const [chats, setChats] = useState([]);
   const { UserId, role } = route.params;
@@ -175,6 +74,7 @@ const ChatList = ({ navigation, route }) => {
             <ChatListItem
               chat={item}
               userId={UserId}
+              ChatId={item.id}
               onPress={() => handlePressChat(item.id)}
             />
           );
