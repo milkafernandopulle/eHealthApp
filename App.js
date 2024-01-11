@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import PatientDashboard from "./screens/PatientDashboard";
+import { LogBox } from 'react-native';
 import SignIn from "./screens/Signin";
 import SignUp from "./screens/Signup";
 import DoctorDashboard from "./screens/DcotorDashboard";
@@ -31,6 +32,7 @@ const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
 const PatientTabs = createBottomTabNavigator();
 const DoctorTabs = createBottomTabNavigator();
+LogBox.ignoreAllLogs(); 
 function DoctorTabNavigator() {
   const [isVisible, setIsVisible] = useState(true);
   const { userInfo, setUserInfo } = useUserInfo();
@@ -227,10 +229,10 @@ export default function App() {
           </MainStack.Navigator>
         ) : (
           <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-            <MainStack.Screen name="Main" component={MainFlow} />
-            <MainStack.Screen name="PatientProfile" component={PatientProfile} options={{ headerShown: true }} />
             <AuthStack.Screen name="SignIn" component={SignIn} />
             <AuthStack.Screen name="SignUp" component={SignUp} />
+            <MainStack.Screen name="Main" component={MainFlow} />
+            <MainStack.Screen name="PatientProfile" component={PatientProfile} options={{ headerShown: true }} />
             <AuthStack.Screen name="ViewPrescription" component={ViewPrescription} />
           </AuthStack.Navigator>
         )}
