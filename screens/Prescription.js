@@ -49,6 +49,7 @@ const Prescription = ({ route ,params,navigation }) => {
         ref={richText}
         style={styles.richEditor}
         placeholder="Start typing the prescription..."
+        androidLayerType="software"
       />
       <RichToolbar
         style={styles.richBar}

@@ -170,6 +170,8 @@ const DoctorProfile = ({ navigation }) => {
     try {
       const userRef = doc(firestore, "users", userInfo.userID);
       await updateDoc(userRef, {
+        name,
+        email,
         hospitalName,
         speciality,
         image,

@@ -222,18 +222,26 @@ export default function App() {
             <MainStack.Screen name="Prescription" component={Prescription} />
             <MainStack.Screen name="Chat" component={Chat} />
             <MainStack.Screen name="Payment" component={Payment} />
-            <AuthStack.Screen name="SignIn" component={SignIn} />
-            <AuthStack.Screen name="SignUp" component={SignUp} />
-            <AuthStack.Screen name="ViewPrescription" component={ViewPrescription} />
-            <AuthStack.Screen name="EditPrescription" component={Prescription} />
+            <MainStack.Screen name="SignIn" component={SignIn} />
+            <MainStack.Screen name="SignUp" component={SignUp} />
+            <MainStack.Screen name="ViewPrescription" component={ViewPrescription} />
+            <MainStack.Screen name="EditPrescription" component={Prescription} />
           </MainStack.Navigator>
         ) : (
           <AuthStack.Navigator screenOptions={{ headerShown: false }}>
             <AuthStack.Screen name="SignIn" component={SignIn} />
             <AuthStack.Screen name="SignUp" component={SignUp} />
-            <MainStack.Screen name="Main" component={MainFlow} />
-            <MainStack.Screen name="PatientProfile" component={PatientProfile} options={{ headerShown: true }} />
+            <AuthStack.Screen name="Main" component={MainFlow} />
+            <AuthStack.Screen name="PatientProfile" component={PatientProfile} options={{ headerShown: true }} />
+            <AuthStack.Screen name="bookAppointment" component={Appointment} />
+            <AuthStack.Screen name="bookingList" component={BookingList} />
+            <AuthStack.Screen name="bookingDetail" component={BookingDetail} />
+            <AuthStack.Screen name="BookingConfirmation" component={BookingConfirmation} />
+            <AuthStack.Screen name="Prescription" component={Prescription} />
+            <AuthStack.Screen name="Chat" component={Chat} />
+            <AuthStack.Screen name="Payment" component={Payment} />
             <AuthStack.Screen name="ViewPrescription" component={ViewPrescription} />
+            <AuthStack.Screen name="EditPrescription" component={Prescription} />
           </AuthStack.Navigator>
         )}
       </NavigationContainer>

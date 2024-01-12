@@ -319,7 +319,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     marginBottom: 30,
   },
-  button: {},
+  button: {
+    marginTop:40
+  },
   // Add other styles as needed
 });
 

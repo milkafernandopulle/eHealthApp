@@ -8,21 +8,26 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from "@react-navigation/native";
 import { RichEditor, RichToolbar } from "react-native-pell-rich-editor";
 import PrimaryButton from "../components/PrimaryButton";
+import Loading from "../components/Loading";
 const ViewPrescription = ({ route }) => {
   const { prescriptionId } = route.params;
   const navigation = useNavigation();
   const [prescriptionData, setPrescriptionData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading,setIsLoading]=useState(false);
   const richText = useRef();
 
   useEffect(() => {
     const fetchPrescriptionData = async () => {
+      setIsLoading(true)
       const docRef = doc(firestore, "prescriptions", prescriptionId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setPrescriptionData(docSnap.data());
+        setIsLoading(false)
       } else {
         console.log("No such prescription!");
+        setIsLoading(false)
       }
     };
     fetchPrescriptionData();
@@ -70,6 +75,10 @@ const ViewPrescription = ({ route }) => {
     }
   };
 
+  if(isLoading){
+    return <Loading />
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
     {prescriptionData && !isEditing ? (
@@ -91,6 +100,7 @@ const ViewPrescription = ({ route }) => {
           ref={richText}
           style={styles.richEditor}
           initialContentHTML={prescriptionData.prescription}
+          androidLayerType="software"
         />
         <RichToolbar
           style={styles.richBar}
