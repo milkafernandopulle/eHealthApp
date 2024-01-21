@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "AppointmentBooking",
-    "slug": "AppointmentBooking",
-    "version": "1.0.0",
+    "name": "e-Doc",
+    "slug": "e-Doc",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
