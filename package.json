@@ -1,5 +1,5 @@
 {
-  "name": "appointmentbooking",
+  "name": "e-Doc",
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
@@ -35,7 +35,8 @@
     "react-native-screens": "~3.22.0",
     "react-native-vector-icons": "^10.0.2",
     "uuid": "^9.0.1",
-    "expo-linking": "~5.0.2"
+    "expo-linking": "~5.0.2",
+    "react-native-webview": "13.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
