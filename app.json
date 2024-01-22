@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "e-Doc",
-    "slug": "e-Doc",
+    "name": "edoc",
+    "slug": "edoc",
     "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,10 +21,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.milkafernandopulle.edoc"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7887923b-ccdd-4e03-9dd6-e895c78a50fa"
+      }
     }
   }
 }
